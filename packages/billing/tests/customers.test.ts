@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockStripeSdk,
   makeStripeCustomerFixture,
-} from './_helpers.js';
+} from './_helpers';
 
 // Mock do stripe.ts antes de importar o módulo que o consome.
 const mockSdk = createMockStripeSdk();

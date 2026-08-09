@@ -2,7 +2,7 @@
  * Testes de portal.ts — Customer Portal session.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { createMockStripeSdk } from './_helpers.js';
+import { createMockStripeSdk } from './_helpers';
 
 const mockSdk = createMockStripeSdk();
 vi.mock('../src/stripe.js', () => ({

@@ -17,7 +17,7 @@ export {
   getStripeClient,
   getWebhookSecret,
   type StripeClientOptions,
-} from './stripe.js';
+} from './stripe';
 
 // Plan registry
 export {
@@ -30,7 +30,7 @@ export {
   planDefinitionToContract,
   tryGetPlanByCode,
   type PlanDefinition,
-} from './plans.js';
+} from './plans';
 
 // Customer management
 export {
@@ -41,7 +41,7 @@ export {
   findCustomerByTenantId,
   type CustomerCreateInput,
   type CustomerRecord,
-} from './customers.js';
+} from './customers';
 
 // Subscription lifecycle
 export {
@@ -55,7 +55,7 @@ export {
   type CancellationFeedback,
   type CreateSubscriptionInput,
   type SubscriptionRecord,
-} from './subscriptions.js';
+} from './subscriptions';
 
 // Checkout Session
 export {
@@ -63,14 +63,14 @@ export {
   type CheckoutMode,
   type CheckoutSessionInput,
   type CheckoutSessionResult,
-} from './checkout.js';
+} from './checkout';
 
 // Customer Portal
 export {
   createPortalSession,
   type PortalSessionInput,
   type PortalSessionResult,
-} from './portal.js';
+} from './portal';
 
 // Webhook verification
 export {
@@ -79,7 +79,7 @@ export {
   parseStripeEvent,
   verifyWebhook,
   type WebhookVerificationConfig,
-} from './webhook.js';
+} from './webhook';
 
 // Quotas
 export {
@@ -91,7 +91,7 @@ export {
   type QuotaKey,
   type QuotaStatus,
   type QuotaUsage,
-} from './quotas.js';
+} from './quotas';
 
 // Webhooks subpath re-export (package.json export './webhooks')
 export {
@@ -100,4 +100,4 @@ export {
   parseStripeEvent as parseWebhookEvent,
   verifyWebhook as verifyStripeWebhook,
   type WebhookVerificationConfig as StripeWebhookVerificationConfig,
-} from './webhook.js';
+} from './webhook';

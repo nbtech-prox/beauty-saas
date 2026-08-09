@@ -32,14 +32,29 @@ describe('getPlanByCode', () => {
   });
 
   it('lança PlanNotFoundError para code inválido', () => {
-    // @ts-expect-error — teste deliberado de typo
     expect(() => getPlanByCode('invalid')).toThrow(PlanNotFoundError);
+  });
+
+  it('aceita slug do contract (pro-monthly)', () => {
+    const plan = getPlanByCode('pro-monthly');
+    expect(plan.code).toBe('proMonthly');
+    expect(plan.interval).toBe('monthly');
   });
 });
 
 describe('tryGetPlanByCode', () => {
-  it('devolve plano para code válido', () => {
+  it('devolve plano para code válido (singular)', () => {
     expect(tryGetPlanByCode('starterYearly')?.priceCents).toBe(19_000);
+  });
+
+  it('aceita slug do contract (pro-monthly)', () => {
+    const plan = tryGetPlanByCode('pro-monthly');
+    expect(plan?.code).toBe('proMonthly');
+    expect(plan?.priceCents).toBe(4_900);
+  });
+
+  it('aceita slug do contract (enterprise-yearly)', () => {
+    expect(tryGetPlanByCode('enterprise-yearly')?.priceCents).toBe(199_000);
   });
 
   it('devolve undefined em vez de lançar', () => {

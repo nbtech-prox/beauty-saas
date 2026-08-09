@@ -2,7 +2,7 @@
  * Testes de checkout.ts — criação de Checkout Session.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockStripeSdk, makeStripeCheckoutSessionFixture } from './_helpers.js';
+import { createMockStripeSdk, makeStripeCheckoutSessionFixture } from './_helpers';
 
 const mockSdk = createMockStripeSdk();
 vi.mock('../src/stripe.js', () => ({

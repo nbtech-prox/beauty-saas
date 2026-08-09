@@ -193,11 +193,11 @@ const byEnvVar: Map<string, PlanDefinition> = new Map(
 );
 
 /**
- * Resolve um plano pelo seu code canónico.
- * Lança `PlanNotFoundError` se não existir no registry (proteção contra typos).
+ * Resolve um plano pelo seu code canónico (singular `proMonthly`) OU
+ * pelo slug (`pro-monthly`). Lança `PlanNotFoundError` se não existir.
  */
-export function getPlanByCode(code: keyof typeof PLAN_CODES): PlanDefinition {
-  const def = byCode.get(code);
+export function getPlanByCode(code: string): PlanDefinition {
+  const def = tryGetPlanByCode(code);
   if (!def) {
     throw new PlanNotFoundError(`Plano '${code}' não existe no registry.`, code);
   }
@@ -205,13 +205,23 @@ export function getPlanByCode(code: keyof typeof PLAN_CODES): PlanDefinition {
 }
 
 /**
- * Tenta resolver plano por code. Devolve `undefined` se não existir (não lança).
- * Útil para código de UI que precisa de fallback.
+ * Tenta resolver plano por code. Aceita tanto o singular canónico
+ * (`proMonthly`) como o slug (`pro-monthly`). Devolve `undefined`
+ * em vez de lançar.
  */
-export function tryGetPlanByCode(
-  code: string,
-): PlanDefinition | undefined {
-  return byCode.get(code as keyof typeof PLAN_CODES);
+export function tryGetPlanByCode(code: string): PlanDefinition | undefined {
+  // 1. Match exacto (singular canónico).
+  const direct = byCode.get(code);
+  if (direct) return direct;
+
+  // 2. Match por slug → singular (PLAN_CODES).
+  for (const [singular, slug] of Object.entries(PLAN_CODES)) {
+    if (slug === code) {
+      return byCode.get(singular);
+    }
+  }
+
+  return undefined;
 }
 
 /**

@@ -8,7 +8,7 @@
  * IMPORTANTE: Esta é a única camada de enforcement. Não duplicar lógica
  * nos serviços de domínio.
  */
-import { type PlanDefinition } from './plans.js';
+import { type PlanDefinition } from './plans';
 
 export type QuotaKey =
   | 'maxProfessionals'

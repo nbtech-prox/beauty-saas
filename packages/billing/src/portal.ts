@@ -10,7 +10,7 @@
  * Tudo no domínio do Stripe — não precisamos replicar UI.
  */
 import type Stripe from 'stripe';
-import { getStripeClient } from './stripe.js';
+import { getStripeClient } from './stripe';
 
 export interface PortalSessionInput {
   /** Stripe customer ID (cus_xxx). */

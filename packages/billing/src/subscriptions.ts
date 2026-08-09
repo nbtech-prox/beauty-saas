@@ -10,13 +10,13 @@
  */
 import type Stripe from 'stripe';
 import { type SubscriptionStatus } from '@beauty-saas/contracts';
-import { ensureCustomerForTenant } from './customers.js';
+import { ensureCustomerForTenant } from './customers';
 import {
   type PlanDefinition,
   getPlanByCode,
   getStripePriceIdForCode,
-} from './plans.js';
-import { getStripeClient } from './stripe.js';
+} from './plans';
+import { getStripeClient } from './stripe';
 
 export interface CreateSubscriptionInput {
   readonly tenantId: string;

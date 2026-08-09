@@ -21,6 +21,11 @@ export default function HomePage() {
           description="Catálogo comercial sincronizado com Stripe."
         />
         <NavLink
+          href="/portal"
+          title="Portal de cliente"
+          description="Abrir o Customer Portal Stripe para gerir uma subscrição."
+        />
+        <NavLink
           href="/tenants"
           title="Tenants"
           description="Lista de clientes e estado da subscrição."

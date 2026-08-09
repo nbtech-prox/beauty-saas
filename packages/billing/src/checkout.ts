@@ -15,8 +15,8 @@ import type Stripe from 'stripe';
 import {
   getPlanByCode,
   getStripePriceIdForCode,
-} from './plans.js';
-import { getStripeClient } from './stripe.js';
+} from './plans';
+import { getStripeClient } from './stripe';
 
 export type CheckoutMode = 'subscription' | 'payment';
 

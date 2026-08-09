@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createMockStripeSdk,
   makeStripeSubscriptionFixture,
-} from './_helpers.js';
+} from './_helpers';
 
 const mockSdk = createMockStripeSdk();
 vi.mock('../src/stripe.js', () => ({

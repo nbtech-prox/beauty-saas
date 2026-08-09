@@ -8,7 +8,7 @@
  * se já existir (criar de novo causaria múltiplos customers órfãos).
  */
 import type Stripe from 'stripe';
-import { getStripeClient } from './stripe.js';
+import { getStripeClient } from './stripe';
 
 export interface CustomerCreateInput {
   readonly tenantId: string;
