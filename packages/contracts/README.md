@@ -13,56 +13,40 @@
 
 > Se um dado atravessa uma fronteira (HTTP, fila, DB, webhook), tem um schema Zod aqui.
 
-## Estrutura (planeada)
+## Estrutura
 
 ```
 src/
-├── index.ts              Re-exports
-├── tenant.ts             TenantSchema, TenantStatus enum
-├── plan.ts               PlanSchema, PLAN_IDS
-├── subscription.ts       SubscriptionSchema, SubscriptionStatus
-├── service.ts            ServiceSchema, PriceType enum
-├── appointment.ts        AppointmentSchema, AppointmentStatus
-├── common.ts             PaginatedResponse, ApiError, UUID, ISODateString
-└── __tests__/            Cada schema com testes de validação
+├── index.ts              Re-exports de todos os schemas
+├── common.ts             UuidSchema, SlugSchema, EmailSchema, IsoDateString,
+│                         CurrencySchema, TimezoneSchema, LocaleSchema,
+│                         PaginatedResponse<T>, ApiErrorSchema,
+│                         ApiResponse<T> (discriminated union)
+├── tenant.ts             TenantStatusSchema, TenantSchema,
+│                         TenantCreateInputSchema, TenantUpdateInputSchema
+├── plan.ts               PlanTierSchema, BillingIntervalSchema, PlanFeatureSchema,
+│                         PlanLimitsSchema, PlanSchema, PLAN_CODES
+├── subscription.ts       SubscriptionStatusSchema, SubscriptionSchema,
+│                         SubscriptionCreateInputSchema
+├── service.ts            PriceTypeSchema, ServiceSchema,
+│                         ServiceConsistentSchema (refinement price↔priceType),
+│                         ServiceCreateInputSchema
+└── *.test.ts             Vitest — 75 testes, ~100% coverage dos schemas
 ```
-
-## Exemplo (planeado)
-
-```ts
-// src/tenant.ts
-import { z } from 'zod';
-
-export const TenantStatus = z.enum([
-  'trialing',
-  'active',
-  'past_due',
-  'canceled',
-  'suspended',
-]);
-export type TenantStatus = z.infer<typeof TenantStatus>;
-
-export const TenantSchema = z.object({
-  id: z.string().uuid(),
-  slug: z.string().min(3).max(32).regex(/^[a-z0-9-]+$/),
-  name: z.string().min(1).max(100),
-  status: TenantStatus,
-  timezone: z.string().default('Europe/Lisbon'),
-  currency: z.literal('EUR').default('EUR'),
-  createdAt: z.string().datetime(),
-  trialEndsAt: z.string().datetime().nullable(),
-});
-
-export type Tenant = z.infer<typeof TenantSchema>;
-```
-
-## Regras de ouro
-
-1. ❌ Nunca exportar tipos sem schema Zod associado
-2. ❌ Nunca usar `any` — inferir do schema
-3. ✅ Cada mudança de schema é **breaking change** → bump major version
-4. ✅ Schemas testados com payloads reais da API (snapshots)
 
 ## Status
 
-🚧 **Stub**. Nada implementado. Próximo passo: copiar `Service` e `Tenant` para aqui a partir do `joycehairbeauty` (read-only, sem alterar produção).
+✅ **v0.1 implementado**. Schemas Zod com testes, build verde, typecheck verde.
+
+- `pnpm test` → 75/75 testes passam
+- `pnpm typecheck` → 0 erros
+- `pnpm build` → ESM + DTS gerados
+
+## Decisões de design
+
+1. **Currency é fixo (`EUR`)** — não há default porque é um literal, não enum. Adicionar moedas no futuro exige migração explícita.
+2. **Timezone default = `Europe/Lisbon`** — o primeiro mercado é PT. Schema permite override explícito.
+3. **Service tem cross-field refinement** (`ServiceConsistentSchema`) — `priceType='fixed'` exige `price>0`; `consult`/`free` exigem `price=null`. Impede inconsistências no domínio.
+4. **PaginatedResponse e ApiResponse são genéricos** — passas o schema do item e ele embrulha com metadata. Sem duplicação.
+5. **Imports com extensão `.js`** — compatível com `moduleResolution: bundler` e garante ESM correcto no Node quando consumido sem bundler.
+6. **Sem dependências runtime além de `zod`** — leve (~50KB) e deterministic.
