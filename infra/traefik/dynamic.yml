@@ -1,0 +1,81 @@
+# Traefik dynamic config para o SaaS
+# Ficheiro carregado via `--providers.file.directory=./infra/traefik/dynamic`
+# (configurado no docker-compose ou nas flags do Traefik)
+
+http:
+  routers:
+    # Landing (beauty.nbtech.pt)
+    landing:
+      rule: "Host(`beauty.nbtech.pt`) || Host(`www.beauty.nbtech.pt`)"
+      service: landing
+      tls:
+        certResolver: letsencrypt
+      entryPoints:
+        - websecure
+
+    # Wildcard para tenants (*.beauty.nbtech.pt)
+    tenant-wildcard:
+      rule: "HostRegexp(`.+\\.plataforma\\.pt`) && !Host(`www.beauty.nbtech.pt`)"
+      priority: 1
+      service: tenant-frontend-proxy
+      tls:
+        certResolver: letsencrypt
+      entryPoints:
+        - websecure
+
+    # Platform admin
+    platform-admin:
+      rule: "Host(`admin.beauty.nbtech.pt`)"
+      service: platform-admin
+      tls:
+        certResolver: letsencrypt
+      entryPoints:
+        - websecure
+
+    # Onboarding (signup)
+    onboarding:
+      rule: "Host(`register.beauty.nbtech.pt`) || Host(`signup.beauty.nbtech.pt`)"
+      service: tenant-onboarding
+      tls:
+        certResolver: letsencrypt
+      entryPoints:
+        - websecure
+
+  services:
+    landing:
+      loadBalancer:
+        servers:
+          - url: "http://landing:3000"
+
+    platform-admin:
+      loadBalancer:
+        servers:
+          - url: "http://platform-admin:3001"
+
+    tenant-onboarding:
+      loadBalancer:
+        servers:
+          - url: "http://tenant-onboarding:3002"
+
+    # Proxy para o joycehairbeauty (data plane), injectando X-Tenant-Slug
+    tenant-frontend-proxy:
+      loadBalancer:
+        servers:
+          - url: "http://joycehairbeauty-web:3000"
+
+  middlewares:
+    tenant-slug-injector:
+      # Extrai o subdomínio do Host header e injecta como X-Tenant-Slug
+      # Implementação: usar Traefik plugin `rewriteheaders` ou serviço sidecar
+      # Por agora placeholder — implementar em produção
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Host: "{host}"
+          X-Tenant-Slug: "{regexReplace1}"
+
+# Certificados wildcard via DNS-01 challenge (Cloudflare, Route53, etc.)
+# Configurar no docker-compose principal com:
+#   - LEGO_EMAIL
+#   - LEGO_CLOUDFLARE_DNS_API_TOKEN (ou provider equivalente)
+tls:
+  certResolver: letsencrypt

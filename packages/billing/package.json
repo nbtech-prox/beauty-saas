@@ -1,0 +1,29 @@
+{
+  "name": "@beauty-saas/billing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wrapper Stripe, gestão de planos, webhooks idempotentes, quotas.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./stripe": "./src/stripe.ts",
+    "./plans": "./src/plans.ts",
+    "./webhooks": "./src/webhooks.ts",
+    "./quotas": "./src/quotas.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests yet'",
+    "lint": "echo 'no lint yet'"
+  },
+  "dependencies": {
+    "@beauty-saas/contracts": "workspace:*",
+    "stripe": "^19.1.0",
+    "zod": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "5.9.3"
+  }
+}

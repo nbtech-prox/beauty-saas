@@ -1,0 +1,24 @@
+{
+  "name": "@beauty-saas/tenancy-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lógica de identificação de tenant a partir do subdomínio. Server-only.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./resolve": "./src/resolve.ts",
+    "./cache": "./src/cache.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests yet'",
+    "lint": "echo 'no lint yet'"
+  },
+  "dependencies": {
+    "@beauty-saas/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

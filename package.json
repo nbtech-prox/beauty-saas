@@ -1,0 +1,30 @@
+{
+  "name": "beauty-saas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma SaaS multi-tenant que orquestra múltiplas instâncias de salões de beleza. Control plane separado do data plane (joycehairbeauty).",
+  "scripts": {
+    "dev": "pnpm --filter landing dev",
+    "dev:admin": "pnpm --filter platform-admin dev",
+    "dev:onboarding": "pnpm --filter tenant-onboarding dev",
+    "dev:all": "pnpm -r --parallel run dev",
+    "build": "pnpm -r --filter './apps/*' run build",
+    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "clean": "pnpm -r exec rm -rf .next node_modules dist .turbo",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "prettier": "^3.4.2",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20.9.0",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@11.5.0"
+}

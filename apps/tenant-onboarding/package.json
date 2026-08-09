@@ -1,0 +1,28 @@
+{
+  "name": "@beauty-saas/tenant-onboarding",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wizard público /register — criar tenant, escolher plano, activar trial.",
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "@beauty-saas/api-client": "workspace:*",
+    "@beauty-saas/billing": "workspace:*",
+    "@beauty-saas/contracts": "workspace:*",
+    "next": "16.2.9",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "typescript": "5.9.3"
+  }
+}
