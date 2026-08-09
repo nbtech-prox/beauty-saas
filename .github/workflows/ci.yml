@@ -67,6 +67,10 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # api-client depende de @beauty-saas/contracts cujos tipos vivem em dist/
+      # (gitignored). É preciso construir o contracts primeiro.
+      - name: Build contracts (dependência de tipos)
+        run: pnpm --filter @beauty-saas/contracts build
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
