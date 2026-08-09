@@ -51,9 +51,9 @@ describe("LocationSchema", () => {
     ).toThrow();
   });
 
-  it("rejects country != PT (for now)", () => {
+  it("só aceita country = 'PT' (plataforma portuguesa apenas, por agora)", () => {
     expect(() =>
-      LocationSchema.parse({ ...validLocation, country: "BR" }),
+      LocationSchema.parse({ ...validLocation, country: "XX" as never }),
     ).toThrow();
   });
 
