@@ -27,6 +27,13 @@ export interface HttpClientConfig {
   baseUrl: string;
   /** Slug do tenant actual; é injectado em `X-Tenant-Slug` em todos os pedidos. */
   tenantSlug: string;
+  /**
+   * Prefixo do path para os endpoints versionados (default: `''`).
+   * Os módulos chamam `/v1/services`, `/v1/auth/login`, etc. — o client
+   * prepende este prefixo. Use `'/api'` se a API é servida com `/api/v1/...`
+   * (caso do `joycehairbeauty` em produção).
+   */
+  apiPrefix?: string;
   /** Pedir CSRF antes de POST autenticados (default: true). Sanctum SPA. */
   withCsrf?: boolean;
   /** Timeout por tentativa, ms (default: 30 000). */
@@ -74,6 +81,7 @@ export class HttpClient {
     this.config = {
       baseUrl: config.baseUrl.replace(/\/+$/, ''),
       tenantSlug: config.tenantSlug,
+      apiPrefix: (config.apiPrefix ?? '').replace(/\/+$/, ''),
       withCsrf: config.withCsrf ?? true,
       timeoutMs: config.timeoutMs ?? 30_000,
       maxRetries: config.maxRetries ?? 3,
@@ -258,7 +266,13 @@ export class HttpClient {
   ): string {
     const base = this.config.baseUrl;
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    const url = new URL(`${base}${cleanPath}`);
+    // O apiPrefix é o que está configurado (default '/api/v1'). Se o caller
+    // passou um path que já começa com o prefixo, não o duplicamos.
+    const prefix = this.config.apiPrefix;
+    const fullPath = cleanPath.startsWith(prefix + '/') || cleanPath === prefix
+      ? cleanPath
+      : `${prefix}${cleanPath}`;
+    const url = new URL(`${base}${fullPath}`);
     if (query) {
       for (const [k, v] of Object.entries(query)) {
         if (v === undefined || v === null) continue;

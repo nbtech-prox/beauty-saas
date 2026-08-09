@@ -60,6 +60,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --passWithNoTests",
+    "smoke": "tsup src/smoke.ts --format esm --target es2022 --out-dir dist-smoke --no-dts && node dist-smoke/smoke.js",
     "lint": "echo 'lint placeholder (eslint config a definir)'"
   },
   "dependencies": {

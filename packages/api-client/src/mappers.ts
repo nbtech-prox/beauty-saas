@@ -71,7 +71,17 @@ export function domainIdToIntId(id: Uuid): WireIntId {
 /** Slug para UUID de tenant (placeholder até o multi-tenant ser real). */
 export function tenantSlugToUuid(slug: string): Uuid {
   // TODO: substituir por lookup real quando o tenant resolver existir.
-  return `00000000-0000-0000-0000-${slug.padStart(12, '0').slice(0, 12)}` as Uuid;
+  // Hash simples (FNV-1a de 32 bits) sobre o slug → 8 chars hex, repetidos para
+  // preencher os 12 chars do último grupo. Determinístico e estável.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < slug.length; i++) {
+    h ^= slug.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  const hex = h.toString(16).padStart(8, '0');
+  // Repetir 8+4 para chegar a 12 chars hex (padded com zeros à direita se faltar).
+  const last = (hex + hex).slice(0, 12).padEnd(12, '0');
+  return `00000000-0000-0000-0000-${last}` as Uuid;
 }
 
 /* ──────────────────────────── Status mapping ──────────────────────────── */

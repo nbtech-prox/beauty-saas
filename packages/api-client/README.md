@@ -61,20 +61,46 @@ adivinhar a topologia.
 | `pnpm build`       | Build com tsup (ESM + .d.ts)             |
 | `pnpm dev`         | Build em watch mode                      |
 | `pnpm typecheck`   | `tsc --noEmit`                           |
-| `pnpm test`        | `vitest run`                             |
-| `pnpm test:watch`  | `vitest` em watch                        |
-| `pnpm test:coverage` | `vitest run --coverage` (sem thresholds por agora) |
-| `pnpm lint`        | Placeholder (eslint config por definir)  |
+| `pnpm test`        | `vitest run --passWithNoTests`                 |
+| `pnpm test:watch`  | `vitest` em watch                              |
+| `pnpm test:coverage` | `vitest run --coverage --passWithNoTests` (ver nota abaixo) |
+| `pnpm lint`        | Placeholder (eslint config por definir)        |
 
 ## Estado
 
-Implementado mas ainda **sem testes** (a API real do `joycehairbeauty` está
-em construção; os fixtures vão ter de ser revistos quando estabilizar).
-O `HttpClient` está coberto por tipos (assinaturas + retorno) e os módulos
-de domínio seguem a forma dos schemas em `@beauty-saas/contracts`.
+Cobertura actual: **111 testes** distribuídos por 4 ficheiros (`errors`,
+`mappers`, `client`, `modules`), correndo em ~1s. Thresholds configurados a
+85% no `vitest.config.ts` (`pnpm test:coverage`).
+
+**Smoke test contra a API real (`pnpm smoke`):** 7/11 verde (health, csrf,
+categories, services, faqs, gallery, 401 em `/auth/me`). As 4 falhas são
+**divergências de schema entre o wire format assumido e o que a API
+serve** (não bugs do client):
+
+| Endpoint             | Issue                                                        |
+| -------------------- | ------------------------------------------------------------ |
+| `/v1/professionals`  | `specialties` é string CSV no API, o schema espera `string[]` |
+| `/v1/business-hours` | `opens_at`/`closes_at` em `HH:mm:ss`, o schema só aceita `HH:mm` |
+| `/v1/public/testimonials` | API devolve `name`/`text`/`is_active`/`order`; schema espera `client_name`/`content`/`is_published` |
+| `/v1/public/settings` | API devolve **object único** (`data: {...}`), schema espera array |
+
+A correcção é trabalho de follow-up (issue #5, abrir quando este PR
+estiver merged). Não bloqueia a fase 1 — o cliente fala com a API, só não
+consegue apresentar os dados daqueles 4 endpoints até os schemas wire
+serem ajustados à realidade.
+
+**Nota sobre `pnpm test:coverage`:** por incompatibilidade transitiva entre
+`brace-expansion@5.0.9` (override pnpm para tapar uma CVE de ReDoS) e
+`minimatch@9` (usado por vitest→test-exclude→glob), o coverage falha em
+runtime com `TypeError: (0 , brace_expansion_1.default) is not a function`.
+O `pnpm test` (sem `--coverage`) corre normalmente. O CI usa `pnpm test`
+e os thresholds ficam para verificação local até a incompatibilidade ser
+resolvida (a jusante, no `minimatch` ou `brace-expansion`).
 
 Próximos passos:
 
-- Adicionar `*.test.ts` por módulo (HttpClient, auth, services, …)
-- Reintroduzir thresholds de cobertura a 85% quando a base de testes existir
-- Validar contra a API real de `joycehairbeauty` (smoke test em `apps/landing`)
+- ~~Adicionar `*.test.ts` por módulo~~ (feito — 111 testes)
+- ~~Reintroduzir thresholds a 85%~~ (feito — ver nota acima)
+- ✅ Smoke test contra a API real (7/11 verde, 4 discrepâncias a corrigir)
+- Ajustar `WireProfessionalSchema`, `WireBusinessHourSchema`,
+  `WireTestimonialSchema`, `WireSettingSchema` à realidade do `joycehairbeauty`
