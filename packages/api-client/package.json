@@ -2,26 +2,75 @@
   "name": "@beauty-saas/api-client",
   "version": "0.1.0",
   "private": true,
-  "description": "Cliente HTTP tipado para a API REST de joycehairbeauty. Usado por todas as apps SaaS.",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "Cliente HTTP tipado e validado para a API REST de joycehairbeauty. Camada de adapter entre os schemas @beauty-saas/contracts e os wire formats reais.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./tenants": "./src/tenants.ts",
-    "./services": "./src/services.ts",
-    "./appointments": "./src/appointments.ts",
-    "./auth": "./src/auth.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "import": "./dist/auth.js"
+    },
+    "./services": {
+      "types": "./dist/services.d.ts",
+      "import": "./dist/services.js"
+    },
+    "./categories": {
+      "types": "./dist/categories.d.ts",
+      "import": "./dist/categories.js"
+    },
+    "./professionals": {
+      "types": "./dist/professionals.d.ts",
+      "import": "./dist/professionals.js"
+    },
+    "./appointments": {
+      "types": "./dist/appointments.d.ts",
+      "import": "./dist/appointments.js"
+    },
+    "./availability": {
+      "types": "./dist/availability.d.ts",
+      "import": "./dist/availability.js"
+    },
+    "./business-hours": {
+      "types": "./dist/business-hours.d.ts",
+      "import": "./dist/business-hours.js"
+    },
+    "./content": {
+      "types": "./dist/content.d.ts",
+      "import": "./dist/content.js"
+    }
   },
+  "files": ["dist", "README.md"],
   "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'no tests yet'",
-    "lint": "echo 'no lint yet'"
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
+    "lint": "echo 'lint placeholder (eslint config a definir)'"
   },
   "dependencies": {
     "@beauty-saas/contracts": "workspace:*",
     "zod": "4.0.1"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3",
+    "vitest": "^2.1.8"
   }
 }

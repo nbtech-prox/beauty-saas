@@ -52,5 +52,5 @@ export async function middleware(req: NextRequest) {
 
 > Este package é usado **apenas no control plane** (`beauty-saas`).
 > No **data plane** (`joycehairbeauty`), a identificação de tenant é feita
-> por middleware Laravel (`IdentifyTenant`) — концепualmente equivalente,
+> por middleware Laravel (`IdentifyTenant`) — conceptualmente equivalente,
 > mas implementado em PHP porque é onde o request é processado.
