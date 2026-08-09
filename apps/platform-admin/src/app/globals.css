@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de design específicos da plataforma (opcional).
+ * Tailwind v4 já traz paleta zinc + emerald. Podemos estender aqui se
+ * precisarmos de cores próprias (ex.: brand color do beauty.saas).
+ */
