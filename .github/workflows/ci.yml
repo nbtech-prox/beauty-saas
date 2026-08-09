@@ -49,3 +49,31 @@ jobs:
         run: pnpm test
       - name: Build
         run: pnpm build
+
+  api-client:
+    name: "api-client (typecheck + test + build)"
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/api-client
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      # api-client depende de @beauty-saas/contracts cujos tipos vivem em dist/
+      # (gitignored). É preciso construir o contracts primeiro.
+      - name: Build contracts (dependência de tipos)
+        run: pnpm --filter @beauty-saas/contracts build
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
