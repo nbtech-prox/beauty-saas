@@ -4,17 +4,29 @@
  * Devolve um objecto com o `HttpClient` + módulos de domínio. É a única
  * coisa que o resto da app precisa de importar.
  */
-import type { HttpClientConfig } from './client.js';
-import { HttpClient } from './client.js';
-import { tenantSlugToUuid, type Uuid } from './mappers.js';
-import { createAuthModule } from './auth.js';
-import { createServicesModule } from './services.js';
-import { createCategoriesModule } from './categories.js';
-import { createProfessionalsModule } from './professionals.js';
-import { createAppointmentsModule } from './appointments.js';
-import { createAvailabilityModule } from './availability.js';
-import { createBusinessHoursModule } from './business-hours.js';
-import { createContentModule } from './content.js';
+import type { HttpClientConfig } from "./client.js";
+import { HttpClient } from "./client.js";
+import { tenantSlugToUuid, type Uuid } from "./mappers.js";
+import { createAuthModule } from "./auth.js";
+import { createServicesModule } from "./services.js";
+import { createCategoriesModule } from "./categories.js";
+import { createProfessionalsModule } from "./professionals.js";
+import { createAppointmentsModule } from "./appointments.js";
+import { createAvailabilityModule } from "./availability.js";
+import { createBusinessHoursModule } from "./business-hours.js";
+import { createContentModule } from "./content.js";
+
+// Re-exports públicos: erros + tipos de domínio mais usados.
+export {
+  ApiError,
+  InvalidJsonError,
+  NetworkError,
+  ValidationError,
+} from "./errors.js";
+export type { FaqItem, GalleryItem, TestimonialItem } from "./content.js";
+export type { ServiceCategory } from "./categories.js";
+export type { BusinessHourDomain } from "./mappers.js";
+export type { WireSettingsObject } from "./schemas/api.js";
 
 export interface ApiClient {
   /** O HttpClient nu (para casos avançados). */
@@ -36,8 +48,9 @@ export interface ApiClient {
  *
  * @example
  *   const api = createApiClient({
- *     baseUrl: process.env.API_URL!,
- *     tenantSlug: 'demo',
+ *     baseUrl: process.env.API_URL!,         // ex.: https://api.joycehairbeauty.pt
+ *     tenantSlug: 'demo',                     // injectado em X-Tenant-Slug
+ *     apiPrefix: '/api',                      // default: '' (vazio)
  *   });
  *   const services = await api.services.list();
  */
