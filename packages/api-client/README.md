@@ -1,48 +1,106 @@
-# @beauty-saas/api-client
+# `@beauty-saas/api-client`
 
-Cliente HTTP **tipado e validado** para a API REST de [`joycehairbeauty`](../../../../../joycehairbeauty/apps/api). Usado por **todas** as apps SaaS.
+Cliente HTTP tipado e validado para a API REST de `joycehairbeauty`. É a camada
+de adapter entre os schemas de domínio em `@beauty-saas/contracts` e os wire
+formats reais devolvidos pela API.
 
-## Responsabilidades
+## Instalação
 
-- Efectuar chamadas HTTP à API do data plane
-- Validar request/response com schemas Zod (de `@beauty-saas/contracts`)
-- Adicionar autenticação (Sanctum SPA token)
-- Adicionar `X-Tenant-Slug` quando apropriado
-- Retry com backoff exponencial para erros 5xx
-- Logging estruturado de cada chamada
+Já vem como package do monorepo (`pnpm-workspace.yaml`). Em qualquer outra app:
 
-## Princípio
-
-**A API de `joycehairbeauty` é o contrato**. Este package é o único ponto onde esse contrato é materializado em código TypeScript. Mudanças na API ⇒ mudança aqui primeiro ⇒ outras apps adaptam-se via tipos.
-
-## Estrutura (planeada)
-
-```
-src/
-├── index.ts              Re-exports
-├── client.ts             HttpClient base (fetch wrapper)
-├── auth.ts               Login, logout, refresh, getCurrentUser
-├── tenants.ts            CRUD tenants (apenas platform_admin)
-├── services.ts           Listar serviços de um tenant
-├── appointments.ts       Listar/criar agendamentos
-└── errors.ts             ApiError, NetworkError, ValidationError
+```ts
+import { createApiClient } from '@beauty-saas/api-client';
 ```
 
-## Uso (planeado)
+## Uso básico
 
 ```ts
 import { createApiClient } from '@beauty-saas/api-client';
 
-const client = createApiClient({
-  baseUrl: process.env.DATA_PLANE_API_URL!,
-  token: async () => getSanctumToken(),
+const api = createApiClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL!, // ex.: https://api.joycehairbeauty.pt
+  tenantSlug: 'demo',                         // injectado em X-Tenant-Slug
+  // opcional: withCsrf, timeoutMs, maxRetries, retryBackoffMs, logger, defaultHeaders
 });
 
-const services = await client.services.list({ tenantSlug: 'demo' });
-// services é tipado como Service[] (validado com Zod) —
-// vinda de demo.beauty.nbtech.pt
+const me = await api.auth.me();
+const services = await api.services.list();
 ```
 
-## Status
+O `createApiClient` devolve um objecto com `raw` (o `HttpClient` nu), o
+`tenantId` já resolvido e um módulo por domínio: `auth`, `services`,
+`categories`, `professionals`, `appointments`, `availability`,
+`businessHours`, `content`.
 
-🚧 **Stub**. Nada implementado. Próximo passo: implementar `client.ts` com fetch wrapper + retry + validação Zod.
+## Filosofia
+
+- **Tudo validado** com Zod. Cada endpoint declara o schema de resposta;
+  o cliente faz `safeParse` e devolve `ValidationError` com issues
+  detalhadas se falhar.
+- **Erros tipados** (ver `errors.ts`): `ApiError`, `ValidationError`,
+  `NetworkError`, `InvalidJsonError`. O resto da app faz `instanceof`.
+- **Sem `any` no caminho quente**. Os módulos são genéricos no tipo de
+  resposta e o `HttpClient` aceita um `z.ZodType<T>` que liga input e output.
+- **Sem dependências de runtime** para além de `zod` e
+  `@beauty-saas/contracts`. `fetch` é nativo do Node 22+.
+
+## Sanctum (CSRF + cookies)
+
+Para POSTs autenticados, o cliente chama `/v1/auth/csrf-cookie` antes do
+pedido (best-effort, configurável via `withCsrf: false`). Os cookies Sanctum
+são enviados automaticamente (`credentials: 'include'`, same-origin).
+
+Em chamadas cross-origin, o caller é responsável por configurar o proxy
+de primeiro estado e os cookies manualmente. O `api-client` não tenta
+adivinhar a topologia.
+
+## Scripts
+
+| Comando            | O que faz                                |
+| ------------------ | ---------------------------------------- |
+| `pnpm build`       | Build com tsup (ESM + .d.ts)             |
+| `pnpm dev`         | Build em watch mode                      |
+| `pnpm typecheck`   | `tsc --noEmit`                           |
+| `pnpm test`        | `vitest run --passWithNoTests`                 |
+| `pnpm test:watch`  | `vitest` em watch                              |
+| `pnpm test:coverage` | `vitest run --coverage --passWithNoTests` (ver nota abaixo) |
+| `pnpm lint`        | Placeholder (eslint config por definir)        |
+
+## Estado
+
+Cobertura actual: **111 testes** distribuídos por 4 ficheiros (`errors`,
+`mappers`, `client`, `modules`), correndo em ~1s. Thresholds configurados a
+85% no `vitest.config.ts` (`pnpm test:coverage`).
+
+**Smoke test contra a API real (`pnpm smoke`):** 7/11 verde (health, csrf,
+categories, services, faqs, gallery, 401 em `/auth/me`). As 4 falhas são
+**divergências de schema entre o wire format assumido e o que a API
+serve** (não bugs do client):
+
+| Endpoint             | Issue                                                        |
+| -------------------- | ------------------------------------------------------------ |
+| `/v1/professionals`  | `specialties` é string CSV no API, o schema espera `string[]` |
+| `/v1/business-hours` | `opens_at`/`closes_at` em `HH:mm:ss`, o schema só aceita `HH:mm` |
+| `/v1/public/testimonials` | API devolve `name`/`text`/`is_active`/`order`; schema espera `client_name`/`content`/`is_published` |
+| `/v1/public/settings` | API devolve **object único** (`data: {...}`), schema espera array |
+
+A correcção é trabalho de follow-up (issue #5, abrir quando este PR
+estiver merged). Não bloqueia a fase 1 — o cliente fala com a API, só não
+consegue apresentar os dados daqueles 4 endpoints até os schemas wire
+serem ajustados à realidade.
+
+**Nota sobre `pnpm test:coverage`:** por incompatibilidade transitiva entre
+`brace-expansion@5.0.9` (override pnpm para tapar uma CVE de ReDoS) e
+`minimatch@9` (usado por vitest→test-exclude→glob), o coverage falha em
+runtime com `TypeError: (0 , brace_expansion_1.default) is not a function`.
+O `pnpm test` (sem `--coverage`) corre normalmente. O CI usa `pnpm test`
+e os thresholds ficam para verificação local até a incompatibilidade ser
+resolvida (a jusante, no `minimatch` ou `brace-expansion`).
+
+Próximos passos:
+
+- ~~Adicionar `*.test.ts` por módulo~~ (feito — 111 testes)
+- ~~Reintroduzir thresholds a 85%~~ (feito — ver nota acima)
+- ✅ Smoke test contra a API real (7/11 verde, 4 discrepâncias a corrigir)
+- Ajustar `WireProfessionalSchema`, `WireBusinessHourSchema`,
+  `WireTestimonialSchema`, `WireSettingSchema` à realidade do `joycehairbeauty`
