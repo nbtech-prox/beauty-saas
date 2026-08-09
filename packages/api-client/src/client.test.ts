@@ -20,6 +20,7 @@ function makeClient(overrides: Partial<ConstructorParameters<typeof HttpClient>[
   return new HttpClient({
     baseUrl: 'https://api.example.com',
     tenantSlug: 'demo',
+    apiPrefix: '/v1', // tests: prefix curto para legibilidade
     retryBackoffMs: 1, // acelerar testes
     timeoutMs: 200,
     ...overrides,
@@ -102,6 +103,50 @@ describe('HttpClient — request básico', () => {
 
     const [url] = fetchMock.mock.calls[0]!;
     expect(url).toBe('https://api.example.com/v1/services?active=true&page=1');
+  });
+
+  it('apiPrefix default é ""', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = makeClient({ apiPrefix: undefined });
+    await client.get('/v1/services');
+
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('https://api.example.com/v1/services');
+  });
+
+  it('apiPrefix customizado prepende os paths', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = makeClient({ apiPrefix: '/api' });
+    await client.get('/v1/services');
+
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('https://api.example.com/api/v1/services');
+  });
+
+  it('apiPrefix não duplica se path já começa com o prefixo', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = makeClient({ apiPrefix: '/api' });
+    await client.get('/api/v1/x');
+
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('https://api.example.com/api/v1/x');
+  });
+
+  it('apiPrefix com barra final é normalizado', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = makeClient({ apiPrefix: '/api/' });
+    await client.get('/v1/x');
+
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('https://api.example.com/api/v1/x');
   });
 
   it('faz trim à barra final do baseUrl', async () => {

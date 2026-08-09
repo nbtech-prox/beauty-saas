@@ -68,9 +68,26 @@ adivinhar a topologia.
 
 ## Estado
 
-Cobertura actual: **107 testes** distribuídos por 4 ficheiros (`errors`,
+Cobertura actual: **111 testes** distribuídos por 4 ficheiros (`errors`,
 `mappers`, `client`, `modules`), correndo em ~1s. Thresholds configurados a
 85% no `vitest.config.ts` (`pnpm test:coverage`).
+
+**Smoke test contra a API real (`pnpm smoke`):** 7/11 verde (health, csrf,
+categories, services, faqs, gallery, 401 em `/auth/me`). As 4 falhas são
+**divergências de schema entre o wire format assumido e o que a API
+serve** (não bugs do client):
+
+| Endpoint             | Issue                                                        |
+| -------------------- | ------------------------------------------------------------ |
+| `/v1/professionals`  | `specialties` é string CSV no API, o schema espera `string[]` |
+| `/v1/business-hours` | `opens_at`/`closes_at` em `HH:mm:ss`, o schema só aceita `HH:mm` |
+| `/v1/public/testimonials` | API devolve `name`/`text`/`is_active`/`order`; schema espera `client_name`/`content`/`is_published` |
+| `/v1/public/settings` | API devolve **object único** (`data: {...}`), schema espera array |
+
+A correcção é trabalho de follow-up (issue #5, abrir quando este PR
+estiver merged). Não bloqueia a fase 1 — o cliente fala com a API, só não
+consegue apresentar os dados daqueles 4 endpoints até os schemas wire
+serem ajustados à realidade.
 
 **Nota sobre `pnpm test:coverage`:** por incompatibilidade transitiva entre
 `brace-expansion@5.0.9` (override pnpm para tapar uma CVE de ReDoS) e
@@ -82,6 +99,8 @@ resolvida (a jusante, no `minimatch` ou `brace-expansion`).
 
 Próximos passos:
 
-- ~~Adicionar `*.test.ts` por módulo~~ (feito — 107 testes)
+- ~~Adicionar `*.test.ts` por módulo~~ (feito — 111 testes)
 - ~~Reintroduzir thresholds a 85%~~ (feito — ver nota acima)
-- Validar contra a API real de `joycehairbeauty` (smoke test em `apps/landing`)
+- ✅ Smoke test contra a API real (7/11 verde, 4 discrepâncias a corrigir)
+- Ajustar `WireProfessionalSchema`, `WireBusinessHourSchema`,
+  `WireTestimonialSchema`, `WireSettingSchema` à realidade do `joycehairbeauty`
