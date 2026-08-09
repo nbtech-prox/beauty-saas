@@ -73,6 +73,12 @@ jobs:
         run: pnpm --filter @beauty-saas/contracts build
       - name: Typecheck
         run: pnpm typecheck
+      # NOTA: `pnpm test:coverage` não corre no CI por incompatibilidade
+      # transitiva entre brace-expansion@5.0.9 (override pnpm para CVE) e
+      # minimatch@9 (usado por vitest/test-exclude/glob). Os thresholds ficam
+      # configurados em vitest.config.ts e podem ser corridos localmente.
+      # Quando a incompatibilidade for resolvida, substituir por:
+      #   run: pnpm test:coverage
       - name: Test
         run: pnpm test
       - name: Build
