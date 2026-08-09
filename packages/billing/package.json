@@ -9,7 +9,12 @@
     ".": "./src/index.ts",
     "./stripe": "./src/stripe.ts",
     "./plans": "./src/plans.ts",
-    "./webhooks": "./src/webhooks.ts",
+    "./customers": "./src/customers.ts",
+    "./subscriptions": "./src/subscriptions.ts",
+    "./checkout": "./src/checkout.ts",
+    "./portal": "./src/portal.ts",
+    "./webhook": "./src/webhook.ts",
+    "./webhooks": "./src/webhook.ts",
     "./quotas": "./src/quotas.ts"
   },
   "scripts": {
