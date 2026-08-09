@@ -625,11 +625,12 @@ describe('content module', () => {
         data: [
           {
             id: 1,
-            client_name: 'Maria',
+            name: 'Maria',
             rating: 5,
-            content: 'Óptimo',
+            text: 'Óptimo',
             is_approved: true,
-            is_published: true,
+            is_active: true,
+            order: 2,
             created_at: '2026-02-01T00:00:00.000Z',
           },
         ],
@@ -640,15 +641,19 @@ describe('content module', () => {
     const result = await content.testimonials();
 
     expect(result).toHaveLength(1);
+    expect(result[0]?.clientName).toBe('Maria');
+    expect(result[0]?.content).toBe('Óptimo');
     expect(result[0]?.rating).toBe(5);
     expect(result[0]?.isApproved).toBe(true);
+    expect(result[0]?.isPublished).toBe(true);
+    expect(result[0]?.order).toBe(2);
     expect(result[0]?.createdAt).toBe('2026-02-01T00:00:00.000Z');
   });
 
-  it('testimonials: rating null quando ausente', async () => {
+  it('testimonials: rating null quando ausente; isPublished cai para is_approved', async () => {
     const client = mockClient({
       get: vi.fn().mockResolvedValue({
-        data: [{ id: 1, client_name: 'X', content: 'Y' }],
+        data: [{ id: 1, name: 'X', text: 'Y' }],
       }),
     });
 
@@ -657,6 +662,22 @@ describe('content module', () => {
 
     expect(result[0]?.rating).toBeNull();
     expect(result[0]?.isApproved).toBe(false);
+    expect(result[0]?.isPublished).toBe(false);
+    expect(result[0]?.order).toBe(0); // default
+  });
+
+  it('testimonials: is_active sobrepõe-se a is_approved para isPublished', async () => {
+    const client = mockClient({
+      get: vi.fn().mockResolvedValue({
+        data: [{ id: 1, name: 'X', text: 'Y', is_approved: true, is_active: false }],
+      }),
+    });
+
+    const content = createContentModule(client);
+    const result = await content.testimonials();
+
+    // is_active (false) ganha sobre is_approved (true) — é o override operacional
+    expect(result[0]?.isApproved).toBe(true);
     expect(result[0]?.isPublished).toBe(false);
   });
 
@@ -684,21 +705,28 @@ describe('content module', () => {
     expect(result[0]?.title).toBe('Salão');
   });
 
-  it('settings: GET /v1/public/settings', async () => {
+  it('settings: GET /v1/public/settings devolve object chave→valor', async () => {
     const client = mockClient({
       get: vi.fn().mockResolvedValue({
-        data: [
-          { key: 'phone', value: '+351 900 000 000', type: 'string' },
-          { key: 'capacity', value: 10, type: 'number' },
-        ],
+        data: {
+          phone: '+351 900 000 000',
+          capacity: 10,
+          about_text: ['Primeiro parágrafo.', 'Segundo parágrafo.'],
+          hero_subtitle: 'Bem-vindo',
+        },
       }),
     });
 
     const content = createContentModule(client);
     const result = await content.settings();
 
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ key: 'phone', value: '+351 900 000 000', type: 'string' });
-    expect(result[1]?.value).toBe(10);
+    // Object plano, não array de {key, value}
+    expect(result).not.toBeInstanceOf(Array);
+    expect(result).toEqual({
+      phone: '+351 900 000 000',
+      capacity: 10,
+      about_text: ['Primeiro parágrafo.', 'Segundo parágrafo.'],
+      hero_subtitle: 'Bem-vindo',
+    });
   });
 });

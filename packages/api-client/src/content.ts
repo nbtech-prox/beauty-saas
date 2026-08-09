@@ -1,18 +1,18 @@
 /**
  * Módulo de conteúdo público — FAQs, testemunhos, galeria, settings.
  */
-import { z } from 'zod';
+import { z } from "zod";
 import {
   WireFaqsResponseSchema,
   WireGalleryResponseSchema,
-  WireSettingsResponseSchema,
+  WireSettingsObjectResponseSchema,
   WireTestimonialsResponseSchema,
   type WireFaq,
   type WireGalleryItem,
-  type WireSetting,
+  type WireSettingsObject,
   type WireTestimonial,
-} from './schemas/api.js';
-import type { HttpClient } from './client.js';
+} from "./schemas/api.js";
+import type { HttpClient } from "./client.js";
 
 export interface FaqItem {
   id: number;
@@ -22,6 +22,11 @@ export interface FaqItem {
   isPublished: boolean;
 }
 
+/**
+ * Testemunho do `joycehairbeauty`. O backend expõe `name` e `text` em vez
+ * de `client_name`/`content`, e `is_active` em vez de `is_published`.
+ * Mapeamos para uma forma mais "domain-friendly" no cliente.
+ */
 export interface TestimonialItem {
   id: number;
   clientName: string;
@@ -29,6 +34,7 @@ export interface TestimonialItem {
   content: string;
   isApproved: boolean;
   isPublished: boolean;
+  order: number;
   createdAt: string | null;
 }
 
@@ -41,51 +47,55 @@ export interface GalleryItem {
   isPublished: boolean;
 }
 
-export interface SettingItem {
-  key: string;
-  value: string | number | boolean | null;
-  type: string | null;
-}
-
 export interface ContentApi {
   faqs(): Promise<FaqItem[]>;
   testimonials(): Promise<TestimonialItem[]>;
   gallery(): Promise<GalleryItem[]>;
-  settings(): Promise<SettingItem[]>;
+  /**
+   * Settings do site como object chave→valor.
+   *
+   * O `joycehairbeauty` serve um object único (`{ hero_subtitle, phone, ... }`)
+   * em vez de um array de `{ key, value }`. Os valores podem ser strings,
+   * numbers, arrays (parágrafos de `about_text`) ou outros — devolvemos
+   * `unknown` e o caller tipa o que precisa.
+   */
+  settings(): Promise<WireSettingsObject>;
 }
 
 export function createContentModule(client: HttpClient): ContentApi {
   return {
     async faqs() {
       const res = await client.get<z.infer<typeof WireFaqsResponseSchema>>(
-        '/v1/public/faqs',
+        "/v1/public/faqs",
         { responseSchema: WireFaqsResponseSchema },
       );
       return res.data.map(faqToDomain);
     },
 
     async testimonials() {
-      const res = await client.get<z.infer<typeof WireTestimonialsResponseSchema>>(
-        '/v1/public/testimonials',
-        { responseSchema: WireTestimonialsResponseSchema },
-      );
+      const res = await client.get<
+        z.infer<typeof WireTestimonialsResponseSchema>
+      >("/v1/public/testimonials", {
+        responseSchema: WireTestimonialsResponseSchema,
+      });
       return res.data.map(testimonialToDomain);
     },
 
     async gallery() {
       const res = await client.get<z.infer<typeof WireGalleryResponseSchema>>(
-        '/v1/public/gallery',
+        "/v1/public/gallery",
         { responseSchema: WireGalleryResponseSchema },
       );
       return res.data.map(galleryToDomain);
     },
 
     async settings() {
-      const res = await client.get<z.infer<typeof WireSettingsResponseSchema>>(
-        '/v1/public/settings',
-        { responseSchema: WireSettingsResponseSchema },
-      );
-      return res.data.map(settingToDomain);
+      const res = await client.get<
+        z.infer<typeof WireSettingsObjectResponseSchema>
+      >("/v1/public/settings", {
+        responseSchema: WireSettingsObjectResponseSchema,
+      });
+      return res.data;
     },
   };
 }
@@ -103,11 +113,14 @@ function faqToDomain(w: WireFaq): FaqItem {
 function testimonialToDomain(w: WireTestimonial): TestimonialItem {
   return {
     id: w.id,
-    clientName: w.client_name,
+    clientName: w.name,
     rating: w.rating ?? null,
-    content: w.content,
+    content: w.text,
     isApproved: w.is_approved ?? false,
-    isPublished: w.is_published ?? false,
+    // is_active é o override operacional ("visível ao público"). Se não vier
+    // definido no wire, caímos para is_approved como fallback conservador.
+    isPublished: w.is_active ?? w.is_approved ?? false,
+    order: w.order ?? 0,
     createdAt: w.created_at ? new Date(w.created_at).toISOString() : null,
   };
 }
@@ -120,13 +133,5 @@ function galleryToDomain(w: WireGalleryItem): GalleryItem {
     imageUrl: w.image_url,
     order: w.order ?? 0,
     isPublished: w.is_published ?? true,
-  };
-}
-
-function settingToDomain(w: WireSetting): SettingItem {
-  return {
-    key: w.key,
-    value: w.value,
-    type: w.type ?? null,
   };
 }

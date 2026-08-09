@@ -14,7 +14,7 @@
  *
  * Misturar os dois criaria um inferno de `.optional()` e `as any`.
  */
-import { z } from 'zod';
+import { z } from "zod";
 
 /* ──────────────────────────── Primitivos wire ──────────────────────────── */
 
@@ -23,15 +23,31 @@ export const WireIntIdSchema = z.number().int().positive();
 export type WireIntId = z.infer<typeof WireIntIdSchema>;
 
 /** String ISO 8601 com timezone. */
-export const WireIsoDateSchema = z.string().datetime({ offset: true }).or(z.string().datetime());
+export const WireIsoDateSchema = z
+  .string()
+  .datetime({ offset: true })
+  .or(z.string().datetime());
 export type WireIsoDate = z.infer<typeof WireIsoDateSchema>;
 
 /** Data simples (YYYY-MM-DD). */
 export const WireDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export type WireDate = z.infer<typeof WireDateSchema>;
 
-/** Hora simples (HH:mm). */
-export const WireTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+/**
+ * Hora simples (HH:mm ou HH:mm:ss).
+ *
+ * O `joycehairbeauty` devolve `HH:mm:ss` (Laravel `time` cast), mas há
+ * endpoints (ex.: availability slots) que devolvem `HH:mm`. Aceitamos
+ * ambos e normalizamos para `HH:mm` no transform — o domínio só precisa
+ * da precisão ao minuto.
+ */
+export const WireTimeSchema = z
+  .string()
+  .regex(
+    /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/,
+    "Time deve ser HH:mm ou HH:mm:ss",
+  )
+  .transform((s) => s.slice(0, 5));
 export type WireTime = z.infer<typeof WireTimeSchema>;
 
 /** O servidor devolve price como **string** porque o cast é `decimal:2` no Laravel. */
@@ -41,9 +57,9 @@ export const WirePriceStringSchema = z.string().regex(/^\d+\.\d{2}$/);
 export const WirePriceSchema = z
   .union([z.string(), z.number()])
   .transform((v, ctx) => {
-    const n = typeof v === 'number' ? v : Number(v);
+    const n = typeof v === "number" ? v : Number(v);
     if (Number.isNaN(n)) {
-      ctx.addIssue({ code: 'custom', message: 'price inválido' });
+      ctx.addIssue({ code: "custom", message: "price inválido" });
       return z.NEVER;
     }
     return Math.round(n * 100) / 100; // garante 2 casas decimais
@@ -83,7 +99,7 @@ export type WirePaginated<T> = {
 export const WireRoleSchema = z.object({
   id: WireIntIdSchema,
   name: z.string(),
-  guard_name: z.string().default('web'),
+  guard_name: z.string().default("web"),
 });
 export type WireRole = z.infer<typeof WireRoleSchema>;
 
@@ -92,7 +108,7 @@ export const WireUserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   phone: z.string().nullable().optional(),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status: z.enum(["active", "inactive"]).default("active"),
   email_verified_at: WireIsoDateSchema.nullable().optional(),
   created_at: WireIsoDateSchema,
   updated_at: WireIsoDateSchema,
@@ -112,7 +128,7 @@ export const WireRegisterResponseSchema = z.object({
 
 /* ──────────────────────────── Service wire ──────────────────────────── */
 
-export const WirePriceTypeSchema = z.enum(['fixed', 'from', 'consult']);
+export const WirePriceTypeSchema = z.enum(["fixed", "from", "consult"]);
 export type WirePriceType = z.infer<typeof WirePriceTypeSchema>;
 
 export const WireServiceCategoryRefSchema = z.object({
@@ -121,7 +137,9 @@ export const WireServiceCategoryRefSchema = z.object({
   slug: z.string(),
   order: z.number().int().optional(),
 });
-export type WireServiceCategoryRef = z.infer<typeof WireServiceCategoryRefSchema>;
+export type WireServiceCategoryRef = z.infer<
+  typeof WireServiceCategoryRefSchema
+>;
 
 export const WireServiceSchema = z.object({
   id: WireIntIdSchema,
@@ -135,7 +153,7 @@ export const WireServiceSchema = z.object({
   cleanup_minutes: z.number().int().nonnegative().default(0),
   price: WirePriceSchema.nullable(),
   price_type: WirePriceTypeSchema,
-  currency: z.string().default('EUR'),
+  currency: z.string().default("EUR"),
   is_active: z.boolean(),
   is_featured: z.boolean().optional(),
   is_bookable_online: z.boolean().optional(),
@@ -156,7 +174,9 @@ export const WireServiceSchema = z.object({
 });
 export type WireService = z.infer<typeof WireServiceSchema>;
 
-export const WireServiceListResponseSchema = wireDataResponse(z.array(WireServiceSchema));
+export const WireServiceListResponseSchema = wireDataResponse(
+  z.array(WireServiceSchema),
+);
 
 /* ──────────────────────────── Category wire ──────────────────────────── */
 
@@ -168,27 +188,54 @@ export const WireCategorySchema = z.object({
   order: z.number().int().nonnegative().optional(),
   is_active: z.boolean().optional(),
 });
-export const WireCategoryListResponseSchema = wireDataResponse(z.array(WireCategorySchema));
+export const WireCategoryListResponseSchema = wireDataResponse(
+  z.array(WireCategorySchema),
+);
 
 /* ──────────────────────────── Professional wire ──────────────────────────── */
 
+/**
+ * Lista de especialidades como string CSV ou array.
+ * O `joycehairbeauty` devolve `"Extensão, Mega Hair"` (CSV) por defeito;
+ * algumas APIs REST devuelven `["Extensão", "Mega Hair"]`. Aceitamos
+ * ambos e normalizamos para array.
+ */
+const WireSpecialtiesSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((v) =>
+    typeof v === "string"
+      ? v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : v,
+  )
+  .pipe(z.array(z.string()));
+
 export const WireProfessionalSchema = z.object({
   id: WireIntIdSchema,
+  user_id: WireIntIdSchema.nullable().optional(),
   public_name: z.string(),
   slug: z.string().optional(),
   bio: z.string().nullable().optional(),
-  specialties: z.array(z.string()).optional(),
+  specialties: WireSpecialtiesSchema.optional(),
   color: z.string().nullable().optional(),
   capacity: z.number().int().positive().default(1),
+  sort_order: z.number().int().nonnegative().optional(),
   is_active: z.boolean(),
   is_visible_on_site: z.boolean(),
+  deleted_at: WireIsoDateSchema.nullable().optional(),
+  created_at: WireIsoDateSchema.optional(),
+  updated_at: WireIsoDateSchema.optional(),
   services: z
     .array(
       z.object({
         id: WireIntIdSchema,
         name: z.string(),
         pivot: z
-          .object({ custom_duration_minutes: z.number().int().nullable().optional() })
+          .object({
+            custom_duration_minutes: z.number().int().nullable().optional(),
+          })
           .optional(),
       }),
     )
@@ -203,14 +250,14 @@ export const WireProfessionalListResponseSchema = wireDataResponse(
 
 /** Status reais (mais granulares que o domínio). */
 export const WireAppointmentStatusSchema = z.enum([
-  'pending',
-  'confirmed',
-  'checked_in',
-  'in_progress',
-  'completed',
-  'cancelled_by_client',
-  'cancelled_by_staff',
-  'no_show',
+  "pending",
+  "confirmed",
+  "checked_in",
+  "in_progress",
+  "completed",
+  "cancelled_by_client",
+  "cancelled_by_staff",
+  "no_show",
 ]);
 export type WireAppointmentStatus = z.infer<typeof WireAppointmentStatusSchema>;
 
@@ -228,9 +275,9 @@ export const WireAppointmentSchema = z.object({
   starts_at: WireIsoDateSchema,
   ends_at: WireIsoDateSchema,
   duration_minutes: z.number().int().positive(),
-  timezone: z.string().default('Europe/Lisbon'),
+  timezone: z.string().default("Europe/Lisbon"),
   price: WirePriceSchema.nullable(),
-  currency: z.string().default('EUR'),
+  currency: z.string().default("EUR"),
   status: WireAppointmentStatusSchema,
   origin: z.string().optional(),
   completed_at: WireIsoDateSchema.nullable().optional(),
@@ -242,15 +289,27 @@ export const WireAppointmentSchema = z.object({
   snapshot_duration_minutes: z.number().int().optional(),
   created_at: WireIsoDateSchema.optional(),
   updated_at: WireIsoDateSchema.optional(),
-  service: WireAppointmentRefSchema.extend({ name: z.string().optional() }).optional(),
-  professional: WireAppointmentRefSchema.extend({ public_name: z.string().optional() }).optional(),
-  client: WireAppointmentRefSchema.extend({ name: z.string().optional() }).optional(),
+  service: WireAppointmentRefSchema.extend({
+    name: z.string().optional(),
+  }).optional(),
+  professional: WireAppointmentRefSchema.extend({
+    public_name: z.string().optional(),
+  }).optional(),
+  client: WireAppointmentRefSchema.extend({
+    name: z.string().optional(),
+  }).optional(),
 });
 export type WireAppointment = z.infer<typeof WireAppointmentSchema>;
 
-export const WireAppointmentResponseSchema = wireDataResponse(WireAppointmentSchema);
-export const WireAppointmentsListResponseSchema = WirePaginatedSchema(WireAppointmentSchema);
-export const WireMyAppointmentsResponseSchema = WirePaginatedSchema(WireAppointmentSchema);
+export const WireAppointmentResponseSchema = wireDataResponse(
+  WireAppointmentSchema,
+);
+export const WireAppointmentsListResponseSchema = WirePaginatedSchema(
+  WireAppointmentSchema,
+);
+export const WireMyAppointmentsResponseSchema = WirePaginatedSchema(
+  WireAppointmentSchema,
+);
 
 /* ──────────────────────────── Availability wire ──────────────────────────── */
 
@@ -262,18 +321,20 @@ export const WireAvailabilitySlotGroupSchema = z.object({
 export const WireAvailabilitySlotsResponseSchema = wireDataResponse(
   z.array(WireAvailabilitySlotGroupSchema),
 );
-export type WireAvailabilitySlotGroup = z.infer<typeof WireAvailabilitySlotGroupSchema>;
+export type WireAvailabilitySlotGroup = z.infer<
+  typeof WireAvailabilitySlotGroupSchema
+>;
 
 /* ──────────────────────────── Business hours wire ──────────────────────────── */
 
 export const WireDayOfWeekSchema = z.enum([
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday',
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
 ]);
 export type WireDayOfWeek = z.infer<typeof WireDayOfWeekSchema>;
 
@@ -283,9 +344,13 @@ export const WireBusinessHourSchema = z.object({
   opens_at: WireTimeSchema.nullable(),
   closes_at: WireTimeSchema.nullable(),
   is_closed: z.boolean().default(false),
+  created_at: WireIsoDateSchema.optional(),
+  updated_at: WireIsoDateSchema.optional(),
 });
 export type WireBusinessHour = z.infer<typeof WireBusinessHourSchema>;
-export const WireBusinessHoursResponseSchema = wireDataResponse(z.array(WireBusinessHourSchema));
+export const WireBusinessHoursResponseSchema = wireDataResponse(
+  z.array(WireBusinessHourSchema),
+);
 
 /* ──────────────────────────── Content wire ──────────────────────────── */
 
@@ -298,14 +363,24 @@ export const WireFaqSchema = z.object({
 });
 export type WireFaq = z.infer<typeof WireFaqSchema>;
 
+/**
+ * Schema de testimonial alinhado com o que o `joycehairbeauty` realmente
+ * serve: `name` (em vez de `client_name`), `text` (em vez de `content`),
+ * `is_active` (em vez de `is_published`).
+ *
+ * Mantemos `is_approved` que está nos dados reais (campo de moderação).
+ */
 export const WireTestimonialSchema = z.object({
   id: WireIntIdSchema,
-  client_name: z.string(),
+  name: z.string(),
+  text: z.string(),
   rating: z.number().int().min(1).max(5).optional(),
-  content: z.string(),
+  order: z.number().int().nonnegative().optional(),
+  is_active: z.boolean().optional(),
   is_approved: z.boolean().optional(),
-  is_published: z.boolean().optional(),
+  user_id: WireIntIdSchema.nullable().optional(),
   created_at: WireIsoDateSchema.optional(),
+  updated_at: WireIsoDateSchema.optional(),
 });
 export type WireTestimonial = z.infer<typeof WireTestimonialSchema>;
 
@@ -319,6 +394,14 @@ export const WireGalleryItemSchema = z.object({
 });
 export type WireGalleryItem = z.infer<typeof WireGalleryItemSchema>;
 
+/**
+ * Settings como key/value plano (string, number, boolean, null).
+ *
+ * O `joycehairbeauty` serve um object único (`data: { hero_subtitle, ... }`)
+ * e não um array de `{key, value}`. Aceitamos ambas as formas para
+ * tolerância a evoluções da API, e o módulo `content.ts` decide qual
+ * esperar.
+ */
 export const WireSettingSchema = z.object({
   key: z.string(),
   value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
@@ -326,7 +409,27 @@ export const WireSettingSchema = z.object({
 });
 export type WireSetting = z.infer<typeof WireSettingSchema>;
 
+/** Resposta antiga: `data: [{ key, value, type }, ...]`. */
+export const WireSettingsResponseSchema = z.object({
+  data: z.array(WireSettingSchema),
+});
+
+/**
+ * Resposta real do joycehairbeauty: `data: { key1: value1, key2: value2, ... }`.
+ * Aceitamos `unknown` no `value` porque o backend mistura strings, numbers,
+ * arrays (`about_text` é array de parágrafos) e até nested objects.
+ */
+export const WireSettingsObjectResponseSchema = z.object({
+  data: z.record(z.string(), z.unknown()),
+});
+export type WireSettingsObject = z.infer<
+  typeof WireSettingsObjectResponseSchema
+>["data"];
+
 export const WireFaqsResponseSchema = wireDataResponse(z.array(WireFaqSchema));
-export const WireTestimonialsResponseSchema = wireDataResponse(z.array(WireTestimonialSchema));
-export const WireGalleryResponseSchema = wireDataResponse(z.array(WireGalleryItemSchema));
-export const WireSettingsResponseSchema = z.object({ data: z.array(WireSettingSchema) });
+export const WireTestimonialsResponseSchema = wireDataResponse(
+  z.array(WireTestimonialSchema),
+);
+export const WireGalleryResponseSchema = wireDataResponse(
+  z.array(WireGalleryItemSchema),
+);
