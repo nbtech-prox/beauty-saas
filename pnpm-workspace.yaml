@@ -3,6 +3,7 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  esbuild: true
   sharp: true
 
 # Overrides alinhados com joycehairbeauty para evitar CVEs conhecidos.

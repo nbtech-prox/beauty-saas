@@ -3,25 +3,73 @@
   "version": "0.1.0",
   "private": true,
   "description": "Schemas Zod e tipos TS partilhados entre apps. Source of truth dos contratos.",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./tenant": "./src/tenant.ts",
-    "./plan": "./src/plan.ts",
-    "./subscription": "./src/subscription.ts",
-    "./service": "./src/service.ts",
-    "./appointment": "./src/appointment.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tenant": {
+      "types": "./dist/tenant.d.ts",
+      "import": "./dist/tenant.js"
+    },
+    "./plan": {
+      "types": "./dist/plan.d.ts",
+      "import": "./dist/plan.js"
+    },
+    "./subscription": {
+      "types": "./dist/subscription.d.ts",
+      "import": "./dist/subscription.js"
+    },
+    "./service": {
+      "types": "./dist/service.d.ts",
+      "import": "./dist/service.js"
+    },
+    "./user": {
+      "types": "./dist/user.d.ts",
+      "import": "./dist/user.js"
+    },
+    "./location": {
+      "types": "./dist/location.d.ts",
+      "import": "./dist/location.js"
+    },
+    "./appointment": {
+      "types": "./dist/appointment.d.ts",
+      "import": "./dist/appointment.js"
+    },
+    "./webhook": {
+      "types": "./dist/webhook.d.ts",
+      "import": "./dist/webhook.js"
+    },
+    "./audit-log": {
+      "types": "./dist/audit-log.d.ts",
+      "import": "./dist/audit-log.js"
+    },
+    "./common": {
+      "types": "./dist/common.d.ts",
+      "import": "./dist/common.js"
+    }
   },
+  "files": ["dist", "README.md"],
   "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'no tests yet'",
-    "lint": "echo 'no lint yet'"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "echo 'lint placeholder (eslint config a definir)'"
   },
   "dependencies": {
     "zod": "4.0.1"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "tsup": "^8.3.5",
+    "typescript": "5.9.3",
+    "vitest": "^2.1.8"
   }
 }
