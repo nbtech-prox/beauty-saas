@@ -27,6 +27,26 @@
       "types": "./dist/service.d.ts",
       "import": "./dist/service.js"
     },
+    "./user": {
+      "types": "./dist/user.d.ts",
+      "import": "./dist/user.js"
+    },
+    "./location": {
+      "types": "./dist/location.d.ts",
+      "import": "./dist/location.js"
+    },
+    "./appointment": {
+      "types": "./dist/appointment.d.ts",
+      "import": "./dist/appointment.js"
+    },
+    "./webhook": {
+      "types": "./dist/webhook.d.ts",
+      "import": "./dist/webhook.js"
+    },
+    "./audit-log": {
+      "types": "./dist/audit-log.d.ts",
+      "import": "./dist/audit-log.js"
+    },
     "./common": {
       "types": "./dist/common.d.ts",
       "import": "./dist/common.js"
