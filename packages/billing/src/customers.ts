@@ -9,6 +9,7 @@
  */
 import type Stripe from 'stripe';
 import { getStripeClient } from './stripe';
+import { assertValidTenantId } from './tenant-id';
 
 export interface CustomerCreateInput {
   readonly tenantId: string;
@@ -43,20 +44,28 @@ const METADATA_TENANT_KEY = 'tenant_id' as const;
 export async function findCustomerByTenantId(
   tenantId: string,
 ): Promise<CustomerRecord | null> {
+  assertValidTenantId(tenantId);
   const stripe = getStripeClient();
-  // Stripe search suporta `metadata:<key>:<value>` para chaves indexadas.
-  // tenant_id é UUID, dentro do limite de 30 chars para index.
-  const result = await stripe.customers.search({
-    query: `metadata['${METADATA_TENANT_KEY}']:'${tenantId}'`,
-    limit: 1,
-  });
+  let startingAfter: string | undefined;
 
-  const found = result.data[0];
-  if (!found) {
-    return null;
-  }
+  do {
+    const page = await stripe.customers.list({
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    const found = page.data.find(
+      (customer) => customer.metadata?.[METADATA_TENANT_KEY] === tenantId,
+    );
+    if (found) return toCustomerRecord(found);
+    if (!page.has_more) return null;
 
-  return toCustomerRecord(found);
+    startingAfter = page.data.at(-1)?.id;
+    if (!startingAfter) {
+      throw new Error('Stripe devolveu uma página vazia com has_more=true.');
+    }
+  } while (startingAfter);
+
+  return null;
 }
 
 /**

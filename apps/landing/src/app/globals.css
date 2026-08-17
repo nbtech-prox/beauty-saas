@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de design da landing pública (opcional).
+ * Tailwind v4 já traz slate + emerald; podemos estender aqui se
+ * precisarmos de cores próprias (brand color do beauty.saas).
+ */

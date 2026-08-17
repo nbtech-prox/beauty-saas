@@ -23,6 +23,7 @@ import {
   type BillingInterval,
   type Currency,
   type Plan,
+  type PlanCode,
   type PlanFeature,
   type PlanLimits,
   type PlanTier,
@@ -30,7 +31,7 @@ import {
 
 /** Definição interna de um plano — antes de sincronizar com Stripe. */
 export interface PlanDefinition {
-  readonly code: keyof typeof PLAN_CODES;
+  readonly code: PlanCode;
   readonly name: string;
   readonly tier: PlanTier;
   readonly interval: BillingInterval;
@@ -47,7 +48,7 @@ export interface PlanDefinition {
 /** Catálogo estático — single source of truth da oferta comercial. */
 export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
   {
-    code: 'starterMonthly',
+    code: PLAN_CODES.starterMonthly,
     name: 'Starter Mensal',
     tier: 'starter',
     interval: 'monthly',
@@ -65,7 +66,7 @@ export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
     stripePriceEnvVar: 'STRIPE_PRICE_STARTER_MONTHLY',
   },
   {
-    code: 'starterYearly',
+    code: PLAN_CODES.starterYearly,
     name: 'Starter Anual',
     tier: 'starter',
     interval: 'yearly',
@@ -83,7 +84,7 @@ export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
     stripePriceEnvVar: 'STRIPE_PRICE_STARTER_YEARLY',
   },
   {
-    code: 'proMonthly',
+    code: PLAN_CODES.proMonthly,
     name: 'Pro Mensal',
     tier: 'pro',
     interval: 'monthly',
@@ -101,7 +102,7 @@ export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
     stripePriceEnvVar: 'STRIPE_PRICE_PRO_MONTHLY',
   },
   {
-    code: 'proYearly',
+    code: PLAN_CODES.proYearly,
     name: 'Pro Anual',
     tier: 'pro',
     interval: 'yearly',
@@ -119,7 +120,7 @@ export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
     stripePriceEnvVar: 'STRIPE_PRICE_PRO_YEARLY',
   },
   {
-    code: 'enterpriseMonthly',
+    code: PLAN_CODES.enterpriseMonthly,
     name: 'Enterprise Mensal',
     tier: 'enterprise',
     interval: 'monthly',
@@ -145,7 +146,7 @@ export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
     stripePriceEnvVar: 'STRIPE_PRICE_ENTERPRISE_MONTHLY',
   },
   {
-    code: 'enterpriseYearly',
+    code: PLAN_CODES.enterpriseYearly,
     name: 'Enterprise Anual',
     tier: 'enterprise',
     interval: 'yearly',
@@ -172,16 +173,6 @@ export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
   },
 ] as const;
 
-/** Códigos canónicos como string (ex.: `'pro-monthly'`). */
-const codeToSlug: Record<keyof typeof PLAN_CODES, string> = {
-  starterMonthly: PLAN_CODES.starterMonthly,
-  starterYearly: PLAN_CODES.starterYearly,
-  proMonthly: PLAN_CODES.proMonthly,
-  proYearly: PLAN_CODES.proYearly,
-  enterpriseMonthly: PLAN_CODES.enterpriseMonthly,
-  enterpriseYearly: PLAN_CODES.enterpriseYearly,
-};
-
 /** Index code → definition (lookup O(1)). */
 const byCode: Map<string, PlanDefinition> = new Map(
   PLAN_DEFINITIONS.map((p) => [p.code, p]),
@@ -193,8 +184,8 @@ const byEnvVar: Map<string, PlanDefinition> = new Map(
 );
 
 /**
- * Resolve um plano pelo seu code canónico (singular `proMonthly`) OU
- * pelo slug (`pro-monthly`). Lança `PlanNotFoundError` se não existir.
+ * Resolve um plano pelo código público canónico (`pro-monthly`).
+ * Lança `PlanNotFoundError` se não existir.
  */
 export function getPlanByCode(code: string): PlanDefinition {
   const def = tryGetPlanByCode(code);
@@ -204,24 +195,9 @@ export function getPlanByCode(code: string): PlanDefinition {
   return def;
 }
 
-/**
- * Tenta resolver plano por code. Aceita tanto o singular canónico
- * (`proMonthly`) como o slug (`pro-monthly`). Devolve `undefined`
- * em vez de lançar.
- */
+/** Tenta resolver um plano pelo código público canónico. */
 export function tryGetPlanByCode(code: string): PlanDefinition | undefined {
-  // 1. Match exacto (singular canónico).
-  const direct = byCode.get(code);
-  if (direct) return direct;
-
-  // 2. Match por slug → singular (PLAN_CODES).
-  for (const [singular, slug] of Object.entries(PLAN_CODES)) {
-    if (slug === code) {
-      return byCode.get(singular);
-    }
-  }
-
-  return undefined;
+  return byCode.get(code);
 }
 
 /**
@@ -249,24 +225,17 @@ export function getPlanByStripePriceId(
  * não estiver configurado.
  */
 export function getStripePriceIdForCode(
-  code: keyof typeof PLAN_CODES,
+  code: PlanCode,
 ): string | undefined {
   const def = getPlanByCode(code);
   const priceId = process.env[def.stripePriceEnvVar];
   return priceId && priceId.startsWith('price_') ? priceId : undefined;
 }
 
-/**
- * Devolve o Plan (no formato do contract) a partir de uma definition.
- * O `id` aqui é placeholder — em runtime vem da DB.
- */
-export function planDefinitionToContract(
-  def: PlanDefinition,
-  overrides: { id: string; createdAt: string; updatedAt: string },
-): Plan {
+/** Converte uma definição do registry no contract público. */
+export function planDefinitionToContract(def: PlanDefinition): Plan {
   return {
-    id: overrides.id,
-    code: codeToSlug[def.code],
+    code: def.code,
     name: def.name,
     tier: def.tier,
     interval: def.interval,
@@ -276,8 +245,6 @@ export function planDefinitionToContract(
     limits: { ...def.limits },
     sortOrder: def.sortOrder,
     isPublic: def.isPublic,
-    createdAt: overrides.createdAt,
-    updatedAt: overrides.updatedAt,
   };
 }
 

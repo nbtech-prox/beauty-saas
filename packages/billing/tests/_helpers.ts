@@ -148,7 +148,7 @@ export function makeStripeSubscriptionFixture(overrides: {
     canceled_at: null,
     metadata: {
       tenant_id: '00000000-0000-4000-8000-000000000001',
-      plan_code: overrides.planCode ?? 'proMonthly',
+      plan_code: overrides.planCode ?? 'pro-monthly',
     },
     items: {
       data: [

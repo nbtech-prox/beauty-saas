@@ -13,11 +13,13 @@
  *   - https://stripe.com/docs/webhooks/signatures
  *   - ADR-003 (Stripe como processador)
  */
-import Stripe from "stripe";
+import Stripe from 'stripe';
 import {
   type StripeWebhookEvent,
   StripeWebhookEventSchema,
-} from "@beauty-saas/contracts";
+} from '@beauty-saas/contracts';
+
+export type { StripeWebhookEvent };
 
 /**
  * Erro de verificação de assinatura. Distinto dos erros de validação
@@ -27,16 +29,17 @@ import {
  * pode ser ataque. Retornar HTTP 401.
  */
 export class WebhookSignatureError extends Error {
-  readonly code: "missing_signature" | "invalid_signature" | "expired" | "malformed";
+  readonly code:
+    'missing_signature' | 'invalid_signature' | 'expired' | 'malformed';
   readonly httpStatus = 401;
 
   constructor(
-    code: WebhookSignatureError["code"],
+    code: WebhookSignatureError['code'],
     message: string,
     readonly cause?: unknown,
   ) {
     super(message);
-    this.name = "WebhookSignatureError";
+    this.name = 'WebhookSignatureError';
     this.code = code;
   }
 }
@@ -79,22 +82,22 @@ export function verifyWebhook(
   signatureHeader: string,
   config: WebhookVerificationConfig,
 ): Stripe.Event {
-  if (!signatureHeader || signatureHeader.trim() === "") {
+  if (!signatureHeader || signatureHeader.trim() === '') {
     throw new WebhookSignatureError(
-      "missing_signature",
-      "Header stripe-signature ausente ou vazio",
+      'missing_signature',
+      'Header stripe-signature ausente ou vazio',
     );
   }
 
-  if (!signatureHeader.includes("=")) {
+  if (!signatureHeader.includes('=')) {
     throw new WebhookSignatureError(
-      "malformed",
-      "Header stripe-signature com formato inválido (esperado key=value)",
+      'malformed',
+      'Header stripe-signature com formato inválido (esperado key=value)',
     );
   }
 
   try {
-    const stripe = new Stripe("sk_dummy_unused_in_verify_only");
+    const stripe = new Stripe('sk_dummy_unused_in_verify_only');
     const event = stripe.webhooks.constructEvent(
       rawBody,
       signatureHeader,
@@ -107,13 +110,13 @@ export function verifyWebhook(
     // (com subclasses para "No signatures found" e timestamp expirado).
     // Mapeamos para códigos estáveis.
     const message = err instanceof Error ? err.message : String(err);
-    if (message.includes("No signatures found")) {
-      throw new WebhookSignatureError("malformed", message, err);
+    if (message.includes('No signatures found')) {
+      throw new WebhookSignatureError('malformed', message, err);
     }
-    if (message.includes("Timestamp outside the tolerance zone")) {
-      throw new WebhookSignatureError("expired", message, err);
+    if (message.includes('Timestamp outside the tolerance zone')) {
+      throw new WebhookSignatureError('expired', message, err);
     }
-    throw new WebhookSignatureError("invalid_signature", message, err);
+    throw new WebhookSignatureError('invalid_signature', message, err);
   }
 }
 
@@ -137,27 +140,27 @@ export function parseStripeEvent(event: Stripe.Event): StripeWebhookEvent {
 export function dispatchKnownEvent(
   event: StripeWebhookEvent,
 ):
-  | { kind: "subscription.created"; data: StripeWebhookEvent }
-  | { kind: "subscription.updated"; data: StripeWebhookEvent }
-  | { kind: "subscription.deleted"; data: StripeWebhookEvent }
-  | { kind: "invoice.payment_failed"; data: StripeWebhookEvent }
-  | { kind: "invoice.paid"; data: StripeWebhookEvent }
-  | { kind: "checkout.session.completed"; data: StripeWebhookEvent }
-  | { kind: "ignored"; type: string } {
+  | { kind: 'subscription.created'; data: StripeWebhookEvent }
+  | { kind: 'subscription.updated'; data: StripeWebhookEvent }
+  | { kind: 'subscription.deleted'; data: StripeWebhookEvent }
+  | { kind: 'invoice.payment_failed'; data: StripeWebhookEvent }
+  | { kind: 'invoice.paid'; data: StripeWebhookEvent }
+  | { kind: 'checkout.session.completed'; data: StripeWebhookEvent }
+  | { kind: 'ignored'; type: string } {
   switch (event.type) {
-    case "customer.subscription.created":
-      return { kind: "subscription.created", data: event };
-    case "customer.subscription.updated":
-      return { kind: "subscription.updated", data: event };
-    case "customer.subscription.deleted":
-      return { kind: "subscription.deleted", data: event };
-    case "invoice.payment_failed":
-      return { kind: "invoice.payment_failed", data: event };
-    case "invoice.paid":
-      return { kind: "invoice.paid", data: event };
-    case "checkout.session.completed":
-      return { kind: "checkout.session.completed", data: event };
+    case 'customer.subscription.created':
+      return { kind: 'subscription.created', data: event };
+    case 'customer.subscription.updated':
+      return { kind: 'subscription.updated', data: event };
+    case 'customer.subscription.deleted':
+      return { kind: 'subscription.deleted', data: event };
+    case 'invoice.payment_failed':
+      return { kind: 'invoice.payment_failed', data: event };
+    case 'invoice.paid':
+      return { kind: 'invoice.paid', data: event };
+    case 'checkout.session.completed':
+      return { kind: 'checkout.session.completed', data: event };
     default:
-      return { kind: "ignored", type: event.type };
+      return { kind: 'ignored', type: event.type };
   }
 }

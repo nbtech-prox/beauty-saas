@@ -31,7 +31,7 @@ afterEach(() => {
 describe('findCustomerByTenantId', () => {
   it('devolve customer quando encontrado', async () => {
     const fixture = makeStripeCustomerFixture();
-    mockSdk.setSearchResult('customers', [fixture]);
+    mockSdk.sdk.customers.list.mockResolvedValue({ data: [fixture], has_more: false });
 
     const result = await findCustomerByTenantId(TENANT_ID);
     expect(result).not.toBeNull();
@@ -41,27 +41,30 @@ describe('findCustomerByTenantId', () => {
   });
 
   it('devolve null quando não existe', async () => {
-    mockSdk.setSearchResult('customers', []);
+    mockSdk.sdk.customers.list.mockResolvedValue({ data: [], has_more: false });
 
     const result = await findCustomerByTenantId(TENANT_ID);
     expect(result).toBeNull();
   });
 
-  it('usa metadata.tenant_id como query', async () => {
-    mockSdk.setSearchResult('customers', []);
+  it('usa list e filtra metadata UUID sem depender da Search API', async () => {
+    const fixture = makeStripeCustomerFixture();
+    mockSdk.sdk.customers.list.mockResolvedValue({
+      data: [makeStripeCustomerFixture({ id: 'cus_outro', metadata: { tenant_id: 'outro' } }), fixture],
+      has_more: false,
+    });
 
-    await findCustomerByTenantId(TENANT_ID);
-    expect(mockSdk.sdk.customers.search).toHaveBeenCalledWith(
-      expect.objectContaining({
-        query: expect.stringContaining(TENANT_ID),
-      }),
-    );
+    const result = await findCustomerByTenantId(TENANT_ID);
+
+    expect(result?.id).toBe(fixture.id);
+    expect(mockSdk.sdk.customers.list).toHaveBeenCalledWith({ limit: 100 });
+    expect(mockSdk.sdk.customers.search).not.toHaveBeenCalled();
   });
 });
 
 describe('createCustomerForTenant', () => {
   it('cria customer novo', async () => {
-    mockSdk.setSearchResult('customers', []); // não existe
+    mockSdk.sdk.customers.list.mockResolvedValue({ data: [], has_more: false }); // não existe
     mockSdk.setCreateResult('customers', makeStripeCustomerFixture());
 
     const result = await createCustomerForTenant({
@@ -78,7 +81,10 @@ describe('createCustomerForTenant', () => {
   });
 
   it('lança DuplicateCustomerError se já existir', async () => {
-    mockSdk.setSearchResult('customers', [makeStripeCustomerFixture()]);
+    mockSdk.sdk.customers.list.mockResolvedValue({
+      data: [makeStripeCustomerFixture()],
+      has_more: false,
+    });
 
     await expect(
       createCustomerForTenant({
@@ -92,7 +98,7 @@ describe('createCustomerForTenant', () => {
 describe('ensureCustomerForTenant', () => {
   it('devolve existente sem criar novo', async () => {
     const existing = makeStripeCustomerFixture();
-    mockSdk.setSearchResult('customers', [existing]);
+    mockSdk.sdk.customers.list.mockResolvedValue({ data: [existing], has_more: false });
 
     const result = await ensureCustomerForTenant({
       tenantId: TENANT_ID,
@@ -103,7 +109,7 @@ describe('ensureCustomerForTenant', () => {
   });
 
   it('cria novo se não existir', async () => {
-    mockSdk.setSearchResult('customers', []);
+    mockSdk.sdk.customers.list.mockResolvedValue({ data: [], has_more: false });
     mockSdk.setCreateResult('customers', makeStripeCustomerFixture());
 
     await ensureCustomerForTenant({
@@ -115,7 +121,7 @@ describe('ensureCustomerForTenant', () => {
 
   it('actualiza email se mudou', async () => {
     const existing = makeStripeCustomerFixture({ email: 'old@example.com' });
-    mockSdk.setSearchResult('customers', [existing]);
+    mockSdk.sdk.customers.list.mockResolvedValue({ data: [existing], has_more: false });
     mockSdk.sdk.customers.update.mockResolvedValue(
       makeStripeCustomerFixture({ email: 'new@example.com' }),
     );

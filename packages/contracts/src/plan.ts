@@ -4,26 +4,26 @@
  * Definem limites, features e preço. A relação Plan ↔ Subscription
  * é 1:N — um plano pode ter N tenants subscritos.
  */
-import { z } from 'zod';
-import { CurrencySchema, IsoDateString, UuidSchema } from './common.js';
+import { z } from "zod";
+import { CurrencySchema } from "./common.js";
 
 /** Tier comercial do plano. */
-export const PlanTierSchema = z.enum(['starter', 'pro', 'enterprise']);
+export const PlanTierSchema = z.enum(["starter", "pro", "enterprise"]);
 export type PlanTier = z.infer<typeof PlanTierSchema>;
 
 /** Intervalo de cobrança. */
-export const BillingIntervalSchema = z.enum(['monthly', 'yearly']);
+export const BillingIntervalSchema = z.enum(["monthly", "yearly"]);
 export type BillingInterval = z.infer<typeof BillingIntervalSchema>;
 
 /** Feature flag incluída no plano. */
 export const PlanFeatureSchema = z.enum([
-  'multi_location',
-  'custom_domain',
-  'white_label',
-  'priority_support',
-  'sso_saml',
-  'api_access',
-  'advanced_reports',
+  "multi_location",
+  "custom_domain",
+  "white_label",
+  "priority_support",
+  "sso_saml",
+  "api_access",
+  "advanced_reports",
 ]);
 export type PlanFeature = z.infer<typeof PlanFeatureSchema>;
 
@@ -40,15 +40,30 @@ export const PlanLimitsSchema = z.object({
 });
 export type PlanLimits = z.infer<typeof PlanLimitsSchema>;
 
-/** Schema completo do Plan (resposta da API). */
+/** Códigos públicos e estáveis dos planos. */
+export const PLAN_CODES = {
+  starterMonthly: "starter-monthly",
+  starterYearly: "starter-yearly",
+  proMonthly: "pro-monthly",
+  proYearly: "pro-yearly",
+  enterpriseMonthly: "enterprise-monthly",
+  enterpriseYearly: "enterprise-yearly",
+} as const;
+
+export const PlanCodeSchema = z.enum([
+  PLAN_CODES.starterMonthly,
+  PLAN_CODES.starterYearly,
+  PLAN_CODES.proMonthly,
+  PLAN_CODES.proYearly,
+  PLAN_CODES.enterpriseMonthly,
+  PLAN_CODES.enterpriseYearly,
+]);
+export type PlanCode = z.infer<typeof PlanCodeSchema>;
+
+/** Plano comercial derivado do registry canónico (não persistido). */
 export const PlanSchema = z.object({
-  id: UuidSchema,
   /** Identificador estável, slug-like (ex.: `pro-monthly`). */
-  code: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[a-z0-9-]+$/),
+  code: PlanCodeSchema,
   name: z.string().min(1).max(100),
   tier: PlanTierSchema,
   interval: BillingIntervalSchema,
@@ -61,21 +76,5 @@ export const PlanSchema = z.object({
   sortOrder: z.number().int().nonnegative(),
   /** Plano visível publicamente? (false = plano interno/legacy). */
   isPublic: z.boolean(),
-  createdAt: IsoDateString,
-  updatedAt: IsoDateString,
 });
 export type Plan = z.infer<typeof PlanSchema>;
-
-/**
- * Códigos canónicos dos planos. IMPORTANTE: nunca hardcodos estes
- * valores em código de aplicação — usa sempre `PlanSchema.parse(...)`.
- */
-export const PLAN_CODES = {
-  starterMonthly: 'starter-monthly',
-  starterYearly: 'starter-yearly',
-  proMonthly: 'pro-monthly',
-  proYearly: 'pro-yearly',
-  enterpriseMonthly: 'enterprise-monthly',
-  enterpriseYearly: 'enterprise-yearly',
-} as const;
-export type PlanCode = (typeof PLAN_CODES)[keyof typeof PLAN_CODES];

@@ -58,49 +58,52 @@ src/
 │                         AuditLogSchema, AuditLogCreateInputSchema,
 │                         AuditLogFilterSchema
 │
-└── *.test.ts             Vitest — 189 testes
+└── *.test.ts             Vitest — 190 testes
 ```
 
-## Status
+## Estado
 
-✅ **v0.2 implementado**. Cobertura completa do domínio mapeado em `docs/ARCHITECTURE.md`.
+> **Estado da Fase 1**: **Parcial**
+>
+> **Última actualização**: 2026-08-15
 
-- `pnpm test` → 189/189 testes passam (10 ficheiros de teste)
-- `pnpm typecheck` → 0 erros
-- `pnpm build` → ESM + DTS gerados (10 entries, ~30KB total)
+Os contratos do domínio actualmente mapeado em `docs/ARCHITECTURE.md` estão implementados. O package não é considerado fechado enquanto faltarem validações com mais payloads reais e a reconciliação das divergências encontradas pelo `api-client`.
+
+- Verificação em 2026-08-15: `pnpm test` → 190/190 testes passam (10 ficheiros de teste)
+- Verificação em 2026-08-15: `pnpm typecheck` do package → sem erros
 
 ## Subpath imports
 
 Cada domínio tem um subpath próprio para tree-shaking óptimo:
 
 ```ts
-import { TenantSchema } from '@beauty-saas/contracts/tenant';
-import { AppointmentSchema } from '@beauty-saas/contracts/appointment';
-import { StripeKnownEventSchema } from '@beauty-saas/contracts/webhook';
-import { AuditLogSchema } from '@beauty-saas/contracts/audit-log';
+import { TenantSchema } from "@beauty-saas/contracts/tenant";
+import { AppointmentSchema } from "@beauty-saas/contracts/appointment";
+import { StripeKnownEventSchema } from "@beauty-saas/contracts/webhook";
+import { AuditLogSchema } from "@beauty-saas/contracts/audit-log";
 ```
 
 Ou import geral (puxa tudo):
 
 ```ts
-import * as C from '@beauty-saas/contracts';
+import * as C from "@beauty-saas/contracts";
 ```
 
 ## Cobertura por entidade (ARCHITECTURE.md §4.1)
 
-| Entidade | Schema | Status |
-|---|---|---|
-| `Tenant` | `tenant.ts` | ✅ |
-| `Plan` | `plan.ts` | ✅ |
-| `Subscription` | `subscription.ts` | ✅ |
-| `TenantUser` | `user.ts` | ✅ |
-| `EndUser` | `user.ts` | ✅ |
-| `Service` | `service.ts` | ✅ |
-| `Location` | `location.ts` | ✅ |
-| `Appointment` | `appointment.ts` | ✅ |
-| `AuditLog` | `audit-log.ts` | ✅ |
-| `WebhookEvent` | `webhook.ts` | ✅ |
-| `Professional` | — | ⏭️ (joycehairbeauty-only; sem necessidade de schema partilhado por agora) |
+| Entidade       | Schema            | Status                                                                    |
+| -------------- | ----------------- | ------------------------------------------------------------------------- |
+| `Tenant`       | `tenant.ts`       | ✅                                                                        |
+| `Plan`         | `plan.ts`         | ✅                                                                        |
+| `Subscription` | `subscription.ts` | ✅                                                                        |
+| `TenantUser`   | `user.ts`         | ✅                                                                        |
+| `EndUser`      | `user.ts`         | ✅                                                                        |
+| `Service`      | `service.ts`      | ✅                                                                        |
+| `Location`     | `location.ts`     | ✅                                                                        |
+| `Appointment`  | `appointment.ts`  | ✅                                                                        |
+| `AuditLog`     | `audit-log.ts`    | ✅                                                                        |
+| `WebhookEvent` | `webhook.ts`      | ✅                                                                        |
+| `Professional` | —                 | ⏭️ (joycehairbeauty-only; sem necessidade de schema partilhado por agora) |
 
 ## Decisões de design
 

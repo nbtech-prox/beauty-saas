@@ -1,0 +1,32 @@
+{
+  "name": "@beauty-saas/database",
+  "version": "0.1.0",
+  "private": true,
+  "browser": false,
+  "description": "Persistência PostgreSQL server-only do control plane.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./migrations": "./src/migrations.ts"
+  },
+  "scripts": {
+    "migrate": "tsx src/migrate-cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-integration.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "8.21.0",
+    "tsx": "^4.20.5",
+    "typescript": "5.9.3",
+    "vitest": "^2.1.9"
+  }
+}

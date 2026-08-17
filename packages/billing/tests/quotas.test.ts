@@ -14,7 +14,7 @@ import { getPlanByCode } from '../src/plans.js';
 
 describe('checkQuota', () => {
   it('passa quando todos os contadores estão abaixo do limite', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     const result = checkQuota(def, {
       maxProfessionals: 2,
       maxServices: 10,
@@ -27,7 +27,7 @@ describe('checkQuota', () => {
   });
 
   it('lança QuotaExceededError quando uma quota é excedida', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     expect(() =>
       checkQuota(def, {
         maxProfessionals: 5, // limite: 3
@@ -36,7 +36,7 @@ describe('checkQuota', () => {
   });
 
   it('QuotaExceededError tem detalhes do limite', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     try {
       checkQuota(def, { maxProfessionals: 10 });
       expect.fail('deveria ter lançado');
@@ -51,7 +51,7 @@ describe('checkQuota', () => {
   });
 
   it('recolhe múltiplas quotas excedidas no status', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     try {
       checkQuota(def, {
         maxProfessionals: 99,
@@ -61,7 +61,7 @@ describe('checkQuota', () => {
     } catch (err) {
       // QuotaExceededError é lançado na primeira detectada,
       // mas getQuotaStatuses dá visibilidade completa.
-      const def2 = getPlanByCode('starterMonthly');
+      const def2 = getPlanByCode('starter-monthly');
       const statuses = getQuotaStatuses(def2, {
         maxProfessionals: 99,
         maxServices: 99,
@@ -72,14 +72,14 @@ describe('checkQuota', () => {
   });
 
   it('defaults para 0 quando usage omisso', () => {
-    const def = getPlanByCode('proMonthly');
+    const def = getPlanByCode('pro-monthly');
     const result = checkQuota(def);
     expect(result.statuses.maxProfessionals.used).toBe(0);
     expect(result.statuses.maxProfessionals.percentUsed).toBe(0);
   });
 
   it('calcula percentUsed correctamente', () => {
-    const def = getPlanByCode('proMonthly'); // maxProfessionals=10
+    const def = getPlanByCode('pro-monthly'); // maxProfessionals=10
     const result = checkQuota(def, { maxProfessionals: 5 });
     expect(result.statuses.maxProfessionals.percentUsed).toBe(50);
   });
@@ -87,24 +87,24 @@ describe('checkQuota', () => {
 
 describe('hasQuotaAvailable', () => {
   it('devolve true quando abaixo do limite', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     expect(hasQuotaAvailable(def, 'maxProfessionals', 2)).toBe(true);
   });
 
   it('devolve false quando acima do limite', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     expect(hasQuotaAvailable(def, 'maxProfessionals', 4)).toBe(false);
   });
 
   it('devolve true quando exactamente no limite', () => {
-    const def = getPlanByCode('starterMonthly');
+    const def = getPlanByCode('starter-monthly');
     expect(hasQuotaAvailable(def, 'maxProfessionals', 3)).toBe(true);
   });
 });
 
 describe('getQuotaStatuses', () => {
   it('devolve statuses sem lançar', () => {
-    const def = getPlanByCode('enterpriseMonthly');
+    const def = getPlanByCode('enterprise-monthly');
     const statuses = getQuotaStatuses(def, {
       maxProfessionals: 9999,
     });

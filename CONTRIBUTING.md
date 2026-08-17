@@ -3,7 +3,7 @@
 ## Princípios
 
 1. **Não tocar em `joycehairbeauty`** sem um ADR e um plano de rollback
-2. **Testar antes de pedir review** — `pnpm typecheck && pnpm test`
+2. **Testar antes de pedir review** — executar os gates do workspace alterado e `pnpm test`
 3. **Commits pequenos e descritivos** — Conventional Commits
 4. **Sem secrets em commits** — usar `.env.local`
 5. **Documentar decisões** em `docs/adr/` antes de implementar
@@ -22,13 +22,13 @@ main (deploy produção manual)
 
 ### Branch naming
 
-| Tipo | Padrão | Exemplo |
-|---|---|---|
-| Feature | `feature/<slug>` | `feature/landing-pricing-page` |
-| Fix | `fix/<slug>` | `fix/tenancy-reserved-slugs` |
-| Docs | `docs/<slug>` | `docs/adr-005-rate-limiting` |
-| Chore | `chore/<slug>` | `chore/bump-stripe-19.2` |
-| Refactor | `refactor/<slug>` | `refactor/api-client-fetch` |
+| Tipo     | Padrão            | Exemplo                        |
+| -------- | ----------------- | ------------------------------ |
+| Feature  | `feature/<slug>`  | `feature/landing-pricing-page` |
+| Fix      | `fix/<slug>`      | `fix/tenancy-reserved-slugs`   |
+| Docs     | `docs/<slug>`     | `docs/adr-005-rate-limiting`   |
+| Chore    | `chore/<slug>`    | `chore/bump-stripe-19.2`       |
+| Refactor | `refactor/<slug>` | `refactor/api-client-fetch`    |
 
 ### Conventional Commits
 
@@ -44,7 +44,8 @@ test(api-client): add tenant isolation tests
 
 - [ ] Título segue Conventional Commits
 - [ ] Descrição referencia issue (se aplicável)
-- [ ] Testes passam (`pnpm typecheck && pnpm test`)
+- [ ] Testes do workspace alterado e suite raiz passam (`pnpm test`)
+- [ ] Typecheck do workspace alterado passa; a limitação global actual está documentada no README
 - [ ] Lint passa (`pnpm lint`)
 - [ ] ADR criado/atualizado (se decisão arquitectural)
 - [ ] Screenshots/GIF (se UI)
@@ -55,7 +56,7 @@ test(api-client): add tenant isolation tests
 
 - Node 22+ (ver `.nvmrc`)
 - pnpm 11.5+ (ver `packageManager` no `package.json`)
-- Docker (opcional, para Postgres e Redis)
+- Docker (obrigatório para os testes de integração PostgreSQL de `packages/database`)
 
 ## Como pedir review
 

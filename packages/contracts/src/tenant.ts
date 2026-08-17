@@ -1,8 +1,9 @@
 /**
  * Tenant = uma instância do salão. Cada tenant tem o seu próprio subdomínio
- * (`slug.beauty-saas.pt`), schema PostgreSQL, e dados isolados.
+ * (`slug.beauty-saas.pt`) e dados isolados por `tenant_id` e RLS num schema
+ * PostgreSQL partilhado, conforme ADR-002 e ADR-004.
  */
-import { z } from 'zod';
+import { z } from "zod";
 import {
   CurrencySchema,
   EmailSchema,
@@ -11,15 +12,16 @@ import {
   SlugSchema,
   TimezoneSchema,
   UuidSchema,
-} from './common.js';
+} from "./common.js";
+import { PlanCodeSchema } from "./plan.js";
 
 /** Estado de ciclo de vida do tenant. */
 export const TenantStatusSchema = z.enum([
-  'trialing', // trial ativo
-  'active', // subscrição ativa
-  'past_due', // pagamento falhado, em grace period
-  'canceled', // cancelado pelo owner
-  'suspended', // suspenso por billing/admin
+  "trialing", // trial ativo
+  "active", // subscrição ativa
+  "past_due", // pagamento falhado, em grace period
+  "canceled", // cancelado pelo owner
+  "suspended", // suspenso por billing/admin
 ]);
 export type TenantStatus = z.infer<typeof TenantStatusSchema>;
 
@@ -31,9 +33,9 @@ export const TenantSchema = z.object({
   /** Email do owner do tenant. */
   ownerEmail: EmailSchema,
   status: TenantStatusSchema,
-  timezone: TimezoneSchema.default('Europe/Lisbon'),
+  timezone: TimezoneSchema.default("Europe/Lisbon"),
   currency: CurrencySchema,
-  locale: LocaleSchema.default('pt-PT'),
+  locale: LocaleSchema.default("pt-PT"),
   /** Quando termina o trial (apenas se status='trialing'). */
   trialEndsAt: IsoDateString.nullable(),
   createdAt: IsoDateString,
@@ -51,7 +53,7 @@ export const TenantCreateInputSchema = z.object({
   ownerEmail: EmailSchema,
   ownerName: z.string().min(1).max(100),
   /** Plano escolhido no signup. */
-  planId: z.string().min(1).max(64),
+  planCode: PlanCodeSchema,
   timezone: TimezoneSchema.optional(),
   locale: LocaleSchema.optional(),
 });

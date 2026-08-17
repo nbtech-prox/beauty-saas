@@ -9,13 +9,15 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "echo 'no tests yet'"
+    "test": "vitest run"
   },
   "dependencies": {
     "@beauty-saas/api-client": "workspace:*",
     "@beauty-saas/billing": "workspace:*",
     "@beauty-saas/contracts": "workspace:*",
+    "@beauty-saas/database": "workspace:*",
     "next": "16.2.9",
+    "pg": "8.23.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "zod": "4.0.1"
@@ -23,10 +25,12 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.0",
+    "@types/pg": "8.21.0",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^2.1.9"
   }
 }

@@ -6,7 +6,7 @@ Camada de abstracção sobre **Stripe** para o SaaS. Usado por `platform-admin` 
 
 - Wrapper tipado sobre `stripe-node` (cliente singleton)
 - **Planos comerciais** (registry estático, mapeado a Stripe Price IDs via env vars)
-- **Webhooks** receiver idempotente com verificação de assinatura HMAC-SHA256
+- **Webhooks** com verificação de assinatura HMAC-SHA256 e encaminhamento tipado; a persistência idempotente pertence à aplicação e continua pendente
 - **Customer** management (1 tenant = 1 customer, com `metadata.tenant_id`)
 - **Subscriptions** lifecycle (criar, cancelar, reactivar) com trial/coupon
 - **Checkout Session** (hosted Stripe UI)
@@ -17,38 +17,41 @@ Camada de abstracção sobre **Stripe** para o SaaS. Usado por `platform-admin` 
 
 ```ts
 // Tudo
-import { createCheckoutSession, checkQuota } from '@beauty-saas/billing';
+import { createCheckoutSession, checkQuota } from "@beauty-saas/billing";
 
 // Por módulo (tree-shakable)
-import { verifyWebhook, WebhookSignatureError } from '@beauty-saas/billing/webhooks';
-import { ensureCustomerForTenant } from '@beauty-saas/billing/customers'; // (futuro)
+import {
+  verifyWebhook,
+  WebhookSignatureError,
+} from "@beauty-saas/billing/webhooks";
+import { ensureCustomerForTenant } from "@beauty-saas/billing/customers";
 ```
 
 ## Variáveis de ambiente
 
-| Var | Obrigatório | Descrição |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | sim | `sk_test_...` ou `sk_live_...` |
-| `STRIPE_WEBHOOK_SECRET` | sim | `whsec_...` (do Stripe Dashboard) |
-| `STRIPE_PRICE_STARTER_MONTHLY` | opcional | `price_xxx` do plano |
-| `STRIPE_PRICE_STARTER_YEARLY` | opcional | `price_xxx` do plano |
-| `STRIPE_PRICE_PRO_MONTHLY` | opcional | `price_xxx` do plano |
-| `STRIPE_PRICE_PRO_YEARLY` | opcional | `price_xxx` do plano |
-| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | opcional | `price_xxx` do plano |
-| `STRIPE_PRICE_ENTERPRISE_YEARLY` | opcional | `price_xxx` do plano |
+| Var                               | Obrigatório | Descrição                         |
+| --------------------------------- | ----------- | --------------------------------- |
+| `STRIPE_SECRET_KEY`               | sim         | `sk_test_...` ou `sk_live_...`    |
+| `STRIPE_WEBHOOK_SECRET`           | sim         | `whsec_...` (do Stripe Dashboard) |
+| `STRIPE_PRICE_STARTER_MONTHLY`    | opcional    | `price_xxx` do plano              |
+| `STRIPE_PRICE_STARTER_YEARLY`     | opcional    | `price_xxx` do plano              |
+| `STRIPE_PRICE_PRO_MONTHLY`        | opcional    | `price_xxx` do plano              |
+| `STRIPE_PRICE_PRO_YEARLY`         | opcional    | `price_xxx` do plano              |
+| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | opcional    | `price_xxx` do plano              |
+| `STRIPE_PRICE_ENTERPRISE_YEARLY`  | opcional    | `price_xxx` do plano              |
 
 > Mapeamento plano ↔ Price ID é via env var para permitir a mesma build contra `test` e `live` do Stripe sem rebuild.
 
 ## Planos (catálogo)
 
-| Plan code | Tier | Interval | Price | Quota profissionais | Quota bookings/mês |
-|---|---|---|---|---|---|
-| `starter-monthly` | starter | monthly | €19.00 | 3 | 500 |
-| `starter-yearly` | starter | yearly | €190.00 | 3 | 500 |
-| `pro-monthly` | pro | monthly | €49.00 | 10 | 2 000 |
-| `pro-yearly` | pro | yearly | €490.00 | 10 | 2 000 |
-| `enterprise-monthly` | enterprise | monthly | €199.00 | 100 | 20 000 |
-| `enterprise-yearly` | enterprise | yearly | €1 990.00 | 100 | 20 000 |
+| Plan code            | Tier       | Interval | Price     | Quota profissionais | Quota bookings/mês |
+| -------------------- | ---------- | -------- | --------- | ------------------- | ------------------ |
+| `starter-monthly`    | starter    | monthly  | €19.00    | 3                   | 500                |
+| `starter-yearly`     | starter    | yearly   | €190.00   | 3                   | 500                |
+| `pro-monthly`        | pro        | monthly  | €49.00    | 10                  | 2 000              |
+| `pro-yearly`         | pro        | yearly   | €490.00   | 10                  | 2 000              |
+| `enterprise-monthly` | enterprise | monthly  | €199.00   | 100                 | 20 000             |
+| `enterprise-yearly`  | enterprise | yearly   | €1 990.00 | 100                 | 20 000             |
 
 ## Estrutura
 
@@ -77,22 +80,25 @@ tests/
 
 ## Webhooks suportados
 
-| Evento Stripe | Acção |
-|---|---|
-| `customer.subscription.created` | Activar tenant |
-| `customer.subscription.updated` | Sincronizar plano + quotas |
-| `customer.subscription.deleted` | Marcar canceled (grace 7d) |
-| `invoice.payment_failed` | past_due + email |
-| `invoice.paid` | Reactivar se estava past_due |
-| `checkout.session.completed` | Onboarding completo |
+| Evento Stripe                   | Acção                        |
+| ------------------------------- | ---------------------------- |
+| `customer.subscription.created` | Activar tenant               |
+| `customer.subscription.updated` | Sincronizar plano + quotas   |
+| `customer.subscription.deleted` | Marcar canceled (grace 7d)   |
+| `invoice.payment_failed`        | past_due + email             |
+| `invoice.paid`                  | Reactivar se estava past_due |
+| `checkout.session.completed`    | Onboarding completo          |
 
 ### Verificação de assinatura
 
 ```ts
-import { verifyWebhook, WebhookSignatureError } from '@beauty-saas/billing/webhooks';
+import {
+  verifyWebhook,
+  WebhookSignatureError,
+} from "@beauty-saas/billing/webhooks";
 
 export async function POST(req: Request) {
-  const sig = req.headers.get('stripe-signature') ?? '';
+  const sig = req.headers.get("stripe-signature") ?? "";
   const raw = await req.text();
   try {
     const event = verifyWebhook(raw, sig, {
@@ -126,8 +132,8 @@ RETURNING id;
 ## Quotas
 
 ```ts
-import { checkQuota, QuotaExceededError } from '@beauty-saas/billing/quotas';
-import { getPlanByCode } from '@beauty-saas/billing/plans';
+import { checkQuota, QuotaExceededError } from "@beauty-saas/billing/quotas";
+import { getPlanByCode } from "@beauty-saas/billing/plans";
 
 try {
   checkQuota(getPlanByCode(tenant.planCode), {
@@ -166,6 +172,12 @@ stripe listen --forward-to localhost:3001/api/webhooks/stripe
 stripe trigger customer.subscription.created
 ```
 
-## Status
+## Estado
 
-✅ Implementado. 78 testes (vitest).
+> **Estado da Fase 1**: **Parcial**
+>
+> **Última actualização**: 2026-08-15
+
+As primitivas da biblioteca estão implementadas. Verificação em 2026-08-15: **84/84 testes** passaram em 8 ficheiros.
+
+Isto não equivale a um fluxo de billing concluído: o checkout real ainda não foi validado de ponta a ponta, e o endpoint em `apps/platform-admin` apenas verifica, classifica, regista no log e confirma eventos. Persistência idempotente e efeitos de negócio sobre tenants/subscrições continuam pendentes.

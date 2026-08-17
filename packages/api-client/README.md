@@ -1,25 +1,25 @@
 # `@beauty-saas/api-client`
 
 Cliente HTTP tipado e validado para a API REST de `joycehairbeauty`. É a camada
-de adapter entre os schemas de domínio em `@beauty-saas/contracts` e os wire
-formats reais devolvidos pela API.
+adaptadora entre os schemas de domínio em `@beauty-saas/contracts` e os formatos
+de transporte reais devolvidos pela API.
 
 ## Instalação
 
 Já vem como package do monorepo (`pnpm-workspace.yaml`). Em qualquer outra app:
 
 ```ts
-import { createApiClient } from '@beauty-saas/api-client';
+import { createApiClient } from "@beauty-saas/api-client";
 ```
 
 ## Uso básico
 
 ```ts
-import { createApiClient } from '@beauty-saas/api-client';
+import { createApiClient } from "@beauty-saas/api-client";
 
 const api = createApiClient({
   baseUrl: process.env.NEXT_PUBLIC_API_URL!, // ex.: https://api.joycehairbeauty.pt
-  tenantSlug: 'demo',                         // injectado em X-Tenant-Slug
+  tenantSlug: "demo", // injectado em X-Tenant-Slug
   // opcional: withCsrf, timeoutMs, maxRetries, retryBackoffMs, logger, defaultHeaders
 });
 
@@ -56,38 +56,39 @@ adivinhar a topologia.
 
 ## Scripts
 
-| Comando            | O que faz                                |
-| ------------------ | ---------------------------------------- |
-| `pnpm build`       | Build com tsup (ESM + .d.ts)             |
-| `pnpm dev`         | Build em watch mode                      |
-| `pnpm typecheck`   | `tsc --noEmit`                           |
-| `pnpm test`        | `vitest run --passWithNoTests`                 |
-| `pnpm test:watch`  | `vitest` em watch                              |
+| Comando              | O que faz                                                   |
+| -------------------- | ----------------------------------------------------------- |
+| `pnpm build`         | Build com tsup (ESM + .d.ts)                                |
+| `pnpm dev`           | Build em watch mode                                         |
+| `pnpm typecheck`     | `tsc --noEmit`                                              |
+| `pnpm test`          | `vitest run --passWithNoTests`                              |
+| `pnpm test:watch`    | `vitest` em watch                                           |
 | `pnpm test:coverage` | `vitest run --coverage --passWithNoTests` (ver nota abaixo) |
-| `pnpm lint`        | Placeholder (eslint config por definir)        |
+| `pnpm lint`          | Placeholder (eslint config por definir)                     |
 
 ## Estado
 
-Cobertura actual: **111 testes** distribuídos por 4 ficheiros (`errors`,
+> **Estado da Fase 1**: **Parcial**
+>
+> **Última actualização**: 2026-08-15
+
+Verificação em 2026-08-15: **111 testes** passaram, distribuídos por 4 ficheiros (`errors`,
 `mappers`, `client`, `modules`), correndo em ~1s. Thresholds configurados a
 85% no `vitest.config.ts` (`pnpm test:coverage`).
 
-**Smoke test contra a API real (`pnpm smoke`):** 7/11 verde (health, csrf,
+**Último teste rápido documentado contra a API real (`pnpm smoke`):** 7/11 verde (health, csrf,
 categories, services, faqs, gallery, 401 em `/auth/me`). As 4 falhas são
-**divergências de schema entre o wire format assumido e o que a API
+**divergências de schema entre o formato de transporte assumido e o que a API
 serve** (não bugs do client):
 
-| Endpoint             | Issue                                                        |
-| -------------------- | ------------------------------------------------------------ |
-| `/v1/professionals`  | `specialties` é string CSV no API, o schema espera `string[]` |
-| `/v1/business-hours` | `opens_at`/`closes_at` em `HH:mm:ss`, o schema só aceita `HH:mm` |
+| Endpoint                  | Problema                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/v1/professionals`       | `specialties` é string CSV no API, o schema espera `string[]`                                       |
+| `/v1/business-hours`      | `opens_at`/`closes_at` em `HH:mm:ss`, o schema só aceita `HH:mm`                                    |
 | `/v1/public/testimonials` | API devolve `name`/`text`/`is_active`/`order`; schema espera `client_name`/`content`/`is_published` |
-| `/v1/public/settings` | API devolve **object único** (`data: {...}`), schema espera array |
+| `/v1/public/settings`     | API devolve **object único** (`data: {...}`), schema espera array                                   |
 
-A correcção é trabalho de follow-up (issue #5, abrir quando este PR
-estiver merged). Não bloqueia a fase 1 — o cliente fala com a API, só não
-consegue apresentar os dados daqueles 4 endpoints até os schemas wire
-serem ajustados à realidade.
+A correcção é trabalho de follow-up. Enquanto estes quatro endpoints não forem validados, o `api-client` permanece parcial e a Fase 1 não cumpre o critério de integração com a API real.
 
 **Nota sobre `pnpm test:coverage`:** por incompatibilidade transitiva entre
 `brace-expansion@5.0.9` (override pnpm para tapar uma CVE de ReDoS) e

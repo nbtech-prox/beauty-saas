@@ -38,4 +38,6 @@ export const CheckoutSessionResponseSchema = z.object({
   url: z.string().url(),
   expiresAt: z.string().datetime({ offset: true }),
 });
-export type CheckoutSessionResponse = z.infer<typeof CheckoutSessionResponseSchema>;
+export type CheckoutSessionResponse = z.infer<
+  typeof CheckoutSessionResponseSchema
+>;

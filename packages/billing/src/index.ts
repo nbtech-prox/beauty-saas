@@ -46,6 +46,8 @@ export {
 // Subscription lifecycle
 export {
   SubscriptionConfigError,
+  SubscriptionPaginationError,
+  SubscriptionReconciliationError,
   cancelSubscription,
   createSubscriptionForTenant,
   getSubscription,
@@ -54,6 +56,7 @@ export {
   type CancelSubscriptionOptions,
   type CancellationFeedback,
   type CreateSubscriptionInput,
+  type SubscriptionReconciliationReason,
   type SubscriptionRecord,
 } from './subscriptions';
 
@@ -92,6 +95,9 @@ export {
   type QuotaStatus,
   type QuotaUsage,
 } from './quotas';
+
+export { InvalidTenantIdError } from './tenant-id';
+export { PromotionCodeNotFoundError } from './promotion-codes';
 
 // Webhooks subpath re-export (package.json export './webhooks')
 export {

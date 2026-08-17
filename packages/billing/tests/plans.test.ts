@@ -3,6 +3,7 @@
  *
  * Não tocamos em Stripe aqui. Apenas testamos a lógica pura de mapeamento.
  */
+import { PLAN_CODES } from '@beauty-saas/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   PLAN_DEFINITIONS,
@@ -17,15 +18,15 @@ import {
 
 describe('getPlanByCode', () => {
   it('devolve plano para code canónico', () => {
-    const plan = getPlanByCode('proMonthly');
-    expect(plan.code).toBe('proMonthly');
+    const plan = getPlanByCode('pro-monthly');
+    expect(plan.code).toBe('pro-monthly');
     expect(plan.tier).toBe('pro');
     expect(plan.interval).toBe('monthly');
     expect(plan.priceCents).toBe(4_900);
   });
 
   it('devolve plano enterprise com features completas', () => {
-    const plan = getPlanByCode('enterpriseMonthly');
+    const plan = getPlanByCode('enterprise-monthly');
     expect(plan.tier).toBe('enterprise');
     expect(plan.features).toContain('sso_saml');
     expect(plan.features).toContain('white_label');
@@ -35,21 +36,19 @@ describe('getPlanByCode', () => {
     expect(() => getPlanByCode('invalid')).toThrow(PlanNotFoundError);
   });
 
-  it('aceita slug do contract (pro-monthly)', () => {
-    const plan = getPlanByCode('pro-monthly');
-    expect(plan.code).toBe('proMonthly');
-    expect(plan.interval).toBe('monthly');
+  it('rejeita a chave interna camelCase', () => {
+    expect(() => getPlanByCode('proMonthly')).toThrow(PlanNotFoundError);
   });
 });
 
 describe('tryGetPlanByCode', () => {
   it('devolve plano para code válido (singular)', () => {
-    expect(tryGetPlanByCode('starterYearly')?.priceCents).toBe(19_000);
+    expect(tryGetPlanByCode('starter-yearly')?.priceCents).toBe(19_000);
   });
 
   it('aceita slug do contract (pro-monthly)', () => {
     const plan = tryGetPlanByCode('pro-monthly');
-    expect(plan?.code).toBe('proMonthly');
+    expect(plan?.code).toBe('pro-monthly');
     expect(plan?.priceCents).toBe(4_900);
   });
 
@@ -70,16 +69,16 @@ describe('getStripePriceIdForCode', () => {
 
   it('devolve o price ID quando env var definida', () => {
     process.env['STRIPE_PRICE_STARTER_MONTHLY'] = 'price_test_123';
-    expect(getStripePriceIdForCode('starterMonthly')).toBe('price_test_123');
+    expect(getStripePriceIdForCode('starter-monthly')).toBe('price_test_123');
   });
 
   it('devolve undefined se env var não estiver definida', () => {
-    expect(getStripePriceIdForCode('starterMonthly')).toBeUndefined();
+    expect(getStripePriceIdForCode('starter-monthly')).toBeUndefined();
   });
 
   it('rejeita valor sem prefixo price_ (defesa contra mau setup)', () => {
     process.env['STRIPE_PRICE_STARTER_MONTHLY'] = 'sk_invalid_prefix';
-    expect(getStripePriceIdForCode('starterMonthly')).toBeUndefined();
+    expect(getStripePriceIdForCode('starter-monthly')).toBeUndefined();
   });
 });
 
@@ -91,7 +90,7 @@ describe('getPlanByStripePriceId', () => {
   it('resolve plano a partir do price ID', () => {
     process.env['STRIPE_PRICE_PRO_YEARLY'] = 'price_pro_yearly_abc';
     const plan = getPlanByStripePriceId('price_pro_yearly_abc');
-    expect(plan?.code).toBe('proYearly');
+    expect(plan?.code).toBe('pro-yearly');
   });
 
   it('devolve undefined se price ID não corresponde a nenhum plano', () => {
@@ -118,13 +117,9 @@ describe('listPublicPlans', () => {
 });
 
 describe('planDefinitionToContract', () => {
-  it('mapeia definition → Plan contract com overrides', () => {
-    const def = getPlanByCode('proMonthly');
-    const plan = planDefinitionToContract(def, {
-      id: '00000000-0000-4000-8000-000000000001',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
+  it('mapeia definition directamente para o Plan contract', () => {
+    const def = getPlanByCode('pro-monthly');
+    const plan = planDefinitionToContract(def);
     expect(plan.code).toBe('pro-monthly');
     expect(plan.tier).toBe('pro');
     expect(plan.interval).toBe('monthly');
@@ -134,18 +129,20 @@ describe('planDefinitionToContract', () => {
   });
 
   it('devolve cópia das features/limits (não muta definition)', () => {
-    const def = getPlanByCode('starterMonthly');
-    const plan = planDefinitionToContract(def, {
-      id: '00000000-0000-4000-8000-000000000002',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z',
-    });
+    const def = getPlanByCode('starter-monthly');
+    const plan = planDefinitionToContract(def);
     plan.features.push('priority_support'); // mutar cópia
     expect(def.features).not.toContain('priority_support');
   });
 });
 
 describe('PLAN_DEFINITIONS', () => {
+  it('usa exactamente os códigos públicos canónicos', () => {
+    expect(PLAN_DEFINITIONS.map(({ code }) => code)).toEqual(
+      Object.values(PLAN_CODES),
+    );
+  });
+
   it('tem todas as 6 entradas canónicas', () => {
     expect(PLAN_DEFINITIONS.length).toBe(6);
   });

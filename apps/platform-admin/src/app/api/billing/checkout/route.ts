@@ -22,10 +22,11 @@ import { NextResponse } from 'next/server';
 import {
   type PlanCode,
   PLAN_CODES,
-  type BillingInterval,
+  UuidSchema,
 } from '@beauty-saas/contracts';
 import {
   createCheckoutSession,
+  PromotionCodeNotFoundError,
   SubscriptionConfigError,
   StripeConfigError,
 } from '@beauty-saas/billing';
@@ -59,8 +60,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  if (typeof body['tenantId'] !== 'string' || body['tenantId'].length === 0) {
-    return NextResponse.json({ error: 'tenantId é obrigatório' }, { status: 400 });
+  if (typeof body['tenantId'] !== 'string' || !UuidSchema.safeParse(body['tenantId']).success) {
+    return NextResponse.json({ error: 'tenantId deve ser um UUID válido' }, { status: 400 });
   }
 
   const formParsed = CheckoutFormInputSchema.safeParse({
@@ -86,20 +87,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   const successUrl = `${appUrl}/planos/${planCode}/sucesso?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${appUrl}/planos/${planCode}/cancelado?session_id={CHECKOUT_SESSION_ID}`;
 
-  // 3. Mapear planCode para billing code (singular vs slug).
-  // O nosso `PLAN_CODES` usa slug ('pro-monthly') mas o `getPlanByCode`
-  // espera o singular ('proMonthly'). Vamos normalizar aqui.
-  const billingCode = planCodeToBillingCode(planCode);
-  if (!billingCode) {
-    return NextResponse.json({ error: `Plano ${planCode} não suportado` }, { status: 400 });
-  }
-
-  // 4. Chamar Stripe via @beauty-saas/billing.
+  // 3. Chamar Stripe via @beauty-saas/billing.
   try {
     const session = await createCheckoutSession({
       tenantId,
       customerEmail: formParsed.data.email,
-      planCode: billingCode,
+      planCode,
       mode: 'subscription',
       trialDays: formParsed.data.trialDays > 0 ? formParsed.data.trialDays : undefined,
       couponCode: formParsed.data.couponCode,
@@ -121,6 +114,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       { status: 200 },
     );
   } catch (err) {
+    if (err instanceof PromotionCodeNotFoundError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code },
+        { status: err.httpStatus },
+      );
+    }
     if (err instanceof SubscriptionConfigError) {
       return NextResponse.json(
         { error: err.message, envVar: err.envVar },
@@ -133,25 +132,4 @@ export async function POST(request: Request): Promise<NextResponse> {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
-
-/**
- * Mapeia slug do contract (e.g. 'pro-monthly') para código do billing
- * (e.g. 'proMonthly'). Devolve `null` se o intervalo for desconhecido.
- */
-function planCodeToBillingCode(slug: PlanCode): keyof typeof PLAN_CODES | null {
-  for (const [code, value] of Object.entries(PLAN_CODES)) {
-    if (value !== slug) continue;
-    // código está validado como PlanCode; verificamos o intervalo.
-    const interval = inferInterval(value);
-    if (!interval) return null;
-    return code as keyof typeof PLAN_CODES;
-  }
-  return null;
-}
-
-function inferInterval(slug: string): BillingInterval | null {
-  if (slug.endsWith('-monthly')) return 'monthly';
-  if (slug.endsWith('-yearly')) return 'yearly';
-  return null;
 }

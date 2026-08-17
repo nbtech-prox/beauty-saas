@@ -28,7 +28,7 @@ else
 fi
 
 echo "▶ Validar typecheck..."
-pnpm typecheck || echo "  ⚠️  typecheck falhou (esperado — packages ainda são stubs)"
+pnpm typecheck || echo "  ⚠️  typecheck falhou; consultar as limitações conhecidas no README"
 
 echo ""
 echo "✅ Setup completo."

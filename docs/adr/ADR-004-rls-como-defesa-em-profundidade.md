@@ -7,7 +7,7 @@
 
 ## Contexto
 
-Mesmo com middleware e Global Scopes Eloquent, **bugs acontecem**. Um `Service::all()` sem scope activo (numa nova rota, num job, numa query de debug) pode expor dados cross-tenant. Para SaaS B2B, isto é **inaceitável**.
+Mesmo com middleware, repositories e filtros da aplicação, **bugs acontecem**. Uma query sem `tenant_id` numa nova rota, job ou operação de suporte pode expor dados cross-tenant. Para SaaS B2B, isto é **inaceitável**.
 
 ## Decisão
 
@@ -16,17 +16,20 @@ Adoptar **Row-Level Security (RLS)** do Postgres como **terceira camada** de def
 ## Consequências
 
 ### Positivas
+
 - ✅ **Bugs na camada de aplicação são contidos** ao nível da DB
-- ✅ `SET LOCAL app.tenant_id = '<uuid>'` é suficiente — qualquer query que esqueça o filtro é rejeitada
+- ✅ `set_config('app.tenant_id', '<uuid>', true)` dentro da transacção é suficiente — qualquer query que esqueça o filtro fica limitada pela policy
 - ✅ Compliance mais simples de auditar (RLS policies são visíveis na DB)
 - ✅ Funciona para queries raw (`DB::statement`), jobs assíncronos, psql ad-hoc
 - ✅ Zero overhead perceptível (Postgres avalia policies com índices)
 
 ### Negativas
+
 - ⚠️ Cada tabela precisa de policy explícita (esquecer = buraco)
 - ⚠️ Migrations são mais verbosas
 - ⚠️ Superuser (postgres) bypassa RLS — temos de usar roles dedicados para a app
 - ⚠️ Testes têm de validar RLS explicitamente (não basta testar middleware)
+- ⚠️ Operações globais exigem fronteiras privilegiadas mínimas, definidas no ADR-006
 
 ### Complexidade adicional
 
@@ -43,15 +46,15 @@ Adoptar **Row-Level Security (RLS)** do Postgres como **terceira camada** de def
 ┌─────────────────────────────────────────────┐
 │ Camada 1: Aplicação                         │
 │ - Middleware IdentifyTenant                 │
-│ - Eloquent Global Scopes                    │
+│ - Identificação e autorização do tenant     │
 │ - Policies / Gates                          │
 ├─────────────────────────────────────────────┤
-│ Camada 2: ORM (Eloquent)                    │
-│ - Boot do Model com scope automático        │
-│ - Validação em Form Requests                │
+│ Camada 2: Repository / domínio              │
+│ - Queries parametrizadas                    │
+│ - Validação dos contracts                   │
 ├─────────────────────────────────────────────┤
 │ Camada 3: Database (Postgres RLS) ⭐        │
-│ - SET LOCAL app.tenant_id                   │
+│ - set_config(app.tenant_id, ..., true)      │
 │ - Policies em cada tabela                   │
 ├─────────────────────────────────────────────┤
 │ Camada 4: Infra (rede, secrets, IAM)        │
@@ -63,17 +66,20 @@ Adoptar **Row-Level Security (RLS)** do Postgres como **terceira camada** de def
 ## Implementação
 
 ```sql
--- 1. Setup (uma vez)
-ALTER DATABASE joyce_hair_beauty SET app.tenant_id = '';
+-- 1. Não definir um tenant global na base de dados.
+--    O contexto existe apenas dentro da transacção da operação.
 
 -- 2. Em cada tabela de tenant
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY services_tenant_isolation ON services
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+  USING (
+    tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+  );
 
--- 3. No middleware Laravel
-DB::statement("SET LOCAL app.tenant_id = ?", [$tenant->id]);
+-- 3. Na mesma transacção da operação
+SELECT set_config('app.tenant_id', $1, true);
 ```
 
 ## Testes obrigatórios
@@ -87,7 +93,7 @@ it('impede cross-tenant access mesmo com query raw', function () {
     $serviceA = Service::factory()->for($tenantA)->create();
 
     DB::statement("SET LOCAL app.tenant_id = ?", [$tenantB->id]);
-    
+
     expect(DB::table('services')->where('id', $serviceA->id)->first())->toBeNull();
 });
 ```

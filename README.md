@@ -24,24 +24,28 @@ O **data plane** (a aplicação de cada salão) vive noutro repositório: [`joyc
 │  │ packages/api-client       │  │                            │  │  (Next.js 16)   │    │
 │  │ packages/tenancy-core     │  │                            │  └─────────────────┘    │
 │  │ packages/billing          │  │                            │  PostgreSQL 18 + Redis 8 │
+│  │ packages/database         │  │                            │                         │
 │  │ packages/contracts        │  │                            │                         │
 │  └───────────────────────────┘  │                            │                         │
 └─────────────────────────────────┘                            └─────────────────────────┘
 ```
 
 Para a arquitectura detalhada, ADRs e roadmap: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+O avanço executável da Fase 1, com critérios, gates e evidências, é mantido em
+[`docs/PHASE-1-EXECUTION.md`](./docs/PHASE-1-EXECUTION.md).
 
 ## Stack
 
-| Camada | Tecnologia | Versão | Razão |
-|---|---|---|---|
-| Frontend apps | Next.js (App Router) + React | 16.2 | Alinhado com joycehairbeauty |
-| Linguagem | TypeScript | 5.9 | Strict mode, inferência Zod |
-| Estilos | Tailwind CSS | v4 | Alinhado com joycehairbeauty |
-| Validação | Zod | 4.0 | Schemas runtime + tipos estáticos |
-| Billing | Stripe SDK | 19.x | Standard da indústria |
-| Monorepo | pnpm workspaces | 11.5 | Alinhado com joycehairbeauty |
-| Routing wildcard | Traefik | v3 | DNS-01 challenge para wildcard certs |
+| Camada           | Tecnologia                   | Versão | Razão                                  |
+| ---------------- | ---------------------------- | ------ | -------------------------------------- |
+| Frontend apps    | Next.js (App Router) + React | 16.2   | Alinhado com joycehairbeauty           |
+| Linguagem        | TypeScript                   | 5.9    | Strict mode, inferência Zod            |
+| Estilos          | Tailwind CSS                 | v4     | Alinhado com joycehairbeauty           |
+| Validação        | Zod                          | 4.0    | Schemas runtime + tipos estáticos      |
+| Billing          | Stripe SDK                   | 19.x   | Standard da indústria                  |
+| Control plane DB | PostgreSQL + node-postgres   | 18 / 8 | Persistência explícita e transaccional |
+| Monorepo         | pnpm workspaces              | 11.5   | Alinhado com joycehairbeauty           |
+| Routing wildcard | Traefik                      | v3     | DNS-01 challenge para wildcard certs   |
 
 ## Estrutura
 
@@ -55,9 +59,11 @@ beauty-saas/
 │   ├── api-client/           Cliente HTTP tipado para a API de joycehairbeauty
 │   ├── tenancy-core/         Lógica de identificação de tenant (subdomínio, header)
 │   ├── billing/              Wrapper Stripe, webhooks, planos, quotas
+│   ├── database/             PostgreSQL server-only, migrations e repositories
 │   └── contracts/            Schemas Zod partilhados entre apps
 ├── docs/
 │   ├── ARCHITECTURE.md       Documento principal
+│   ├── PHASE-1-EXECUTION.md  Tracker verificável da Fase 1
 │   ├── adr/                  Architecture Decision Records
 │   └── api/                  OpenAPI snapshot da API consumida
 └── infra/
@@ -67,9 +73,23 @@ beauty-saas/
 
 ## Estado actual
 
-🚧 **Fase 0 — Bootstrap**. Estrutura criada, packages vazios com README explicativo. Nada em produção ainda.
+> **Estado**: Fase 0 concluída; Fase 1 em progresso
+>
+> **Última actualização**: 2026-08-15
 
-Próximo marco: **Fase 1 — MVP vertical slice multi-tenant** (ver roadmap em `docs/ARCHITECTURE.md`).
+| Componente               | Estado        | Realidade actual                                                                                                                            |
+| ------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fase 0 — Bootstrap       | **Concluído** | Monorepo, documentação, ADRs e configuração base criados.                                                                                   |
+| `packages/contracts`     | **Parcial**   | Schemas e tipos do domínio mapeado implementados e testados; falta validar contratos com mais payloads reais.                               |
+| `packages/api-client`    | **Parcial**   | Cliente HTTP e módulos operacionais implementados; o último teste rápido documentado detectou quatro divergências no formato de transporte. |
+| `packages/billing`       | **Parcial**   | Wrapper Stripe, catálogo, clientes Stripe, subscrições, checkout, portal, webhooks e quotas implementados ao nível da biblioteca.           |
+| `packages/database`      | **Parcial**   | Primeira migration e repository tenant+owner implementados; os gates de segurança e concorrência ainda estão em correcção.                  |
+| `apps/platform-admin`    | **Parcial**   | Protótipo de billing com catálogo, checkout, portal e endpoint de webhook; não representa a Fase 2 concluída.                               |
+| `apps/landing`           | **Pendente**  | Stub, sem landing nem pricing funcional.                                                                                                    |
+| `apps/tenant-onboarding` | **Pendente**  | Stub, sem wizard de registo.                                                                                                                |
+| `packages/tenancy-core`  | **Pendente**  | Stub, sem resolução de tenant.                                                                                                              |
+
+O fluxo **registo → checkout/período experimental → webhook idempotente → tenant activo → primeiro agendamento** ainda não está concluído nem validado de ponta a ponta. Ver critérios verificáveis e roadmap em [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
 ## Quickstart (dev)
 
@@ -78,12 +98,14 @@ Próximo marco: **Fase 1 — MVP vertical slice multi-tenant** (ver roadmap em `
 nvm use
 pnpm install
 
-# 2. Validar estrutura
-pnpm typecheck
+# 2. Executar os testes existentes
+pnpm test
 
-# 3. (Em breve) Rodar landing em dev
+# 3. Iniciar a landing (a aplicação continua em estado de stub)
 pnpm dev
 ```
+
+> Limitação conhecida: `pnpm typecheck` ainda não termina com sucesso porque `apps/landing` e `packages/tenancy-core` são stubs sem `tsconfig.json`.
 
 ## Convenções
 
@@ -95,13 +117,13 @@ pnpm dev
 
 ## Relação com joycehairbeauty
 
-| joycehairbeauty | beauty-saas |
-|---|---|
-| Produção, estável | WIP, experimental |
-| Salão único | Multi-tenant |
+| joycehairbeauty               | beauty-saas                             |
+| ----------------------------- | --------------------------------------- |
+| Produção, estável             | WIP, experimental                       |
+| Salão único                   | Multi-tenant                            |
 | Deploy via Dokploy + Nixpacks | Deploy independente (Dokploy ou Vercel) |
-| Laravel + Sanctum | Next.js + Stripe |
-| Schema fixo (1 tenant) | Schema dinâmico (N tenants via API) |
+| Laravel + Sanctum             | Next.js + Stripe                        |
+| Schema fixo (1 tenant)        | Schema dinâmico (N tenants via API)     |
 
 **Regra de ouro**: tudo o que toca em dados de tenants passa pela API de `joycehairbeauty`. Nada é duplicado nem sincronizado por código — só por contrato de API versionado.
 

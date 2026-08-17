@@ -7,11 +7,12 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import type { PlanCode } from '@beauty-saas/contracts';
 import { CheckoutFormInputSchema } from '@/lib/checkout-schema';
 import { getOrCreateTenantId } from '@/lib/tenant-id';
 
 interface CheckoutFormProps {
-  readonly planCode: string;
+  readonly planCode: PlanCode;
   readonly planName: string;
   readonly priceLabel: string;
 }

@@ -11,11 +11,13 @@
  * Trial é suportado via Stripe (não confundir com `trial_period_days` —
  * Checkout trata disso automaticamente).
  */
+import type { PlanCode } from '@beauty-saas/contracts';
 import type Stripe from 'stripe';
 import {
   getPlanByCode,
   getStripePriceIdForCode,
 } from './plans';
+import { resolvePromotionCodeId } from './promotion-codes';
 import { getStripeClient } from './stripe';
 
 export type CheckoutMode = 'subscription' | 'payment';
@@ -23,7 +25,7 @@ export type CheckoutMode = 'subscription' | 'payment';
 export interface CheckoutSessionInput {
   readonly tenantId: string;
   readonly customerEmail: string;
-  readonly planCode: keyof typeof import('@beauty-saas/contracts').PLAN_CODES;
+  readonly planCode: PlanCode;
   readonly mode: CheckoutMode;
   /** Trial days para mode='subscription'. */
   readonly trialDays?: number;
@@ -89,7 +91,7 @@ export async function createCheckoutSession(
   };
 
   if (input.couponCode) {
-    params.discounts = [{ coupon: input.couponCode }];
+    params.discounts = [{ promotion_code: await resolvePromotionCodeId(input.couponCode) }];
   }
 
   const session = await stripe.checkout.sessions.create(params);

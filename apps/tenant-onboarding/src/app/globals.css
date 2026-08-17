@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de design do wizard de onboarding público.
+ * Tailwind v4 traz slate + emerald por defeito; podemos estender aqui
+ * se precisarmos de cores próprias (brand color do beauty.saas).
+ */

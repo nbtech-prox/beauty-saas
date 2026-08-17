@@ -33,7 +33,7 @@ describe('createCheckoutSession', () => {
     const result = await createCheckoutSession({
       tenantId: TENANT_ID,
       customerEmail: 'tenant@example.com',
-      planCode: 'proMonthly',
+      planCode: 'pro-monthly',
       mode: 'subscription',
       successUrl: SUCCESS_URL,
       cancelUrl: CANCEL_URL,
@@ -51,7 +51,7 @@ describe('createCheckoutSession', () => {
     await createCheckoutSession({
       tenantId: TENANT_ID,
       customerEmail: 'tenant@example.com',
-      planCode: 'proMonthly',
+      planCode: 'pro-monthly',
       mode: 'subscription',
       successUrl: SUCCESS_URL,
       cancelUrl: CANCEL_URL,
@@ -69,7 +69,7 @@ describe('createCheckoutSession', () => {
     await createCheckoutSession({
       tenantId: TENANT_ID,
       customerEmail: 'tenant@example.com',
-      planCode: 'proMonthly',
+      planCode: 'pro-monthly',
       mode: 'subscription',
       successUrl: SUCCESS_URL,
       cancelUrl: CANCEL_URL,
@@ -78,7 +78,7 @@ describe('createCheckoutSession', () => {
       expect.objectContaining({
         metadata: expect.objectContaining({
           tenant_id: TENANT_ID,
-          plan_code: 'proMonthly',
+          plan_code: 'pro-monthly',
         }),
       }),
     );
@@ -89,7 +89,7 @@ describe('createCheckoutSession', () => {
       createCheckoutSession({
         tenantId: TENANT_ID,
         customerEmail: 'tenant@example.com',
-        planCode: 'proMonthly',
+        planCode: 'pro-monthly',
         mode: 'subscription',
         successUrl: 'https://app.example.com/billing/success',
         cancelUrl: CANCEL_URL,
@@ -102,7 +102,7 @@ describe('createCheckoutSession', () => {
       createCheckoutSession({
         tenantId: TENANT_ID,
         customerEmail: 'tenant@example.com',
-        planCode: 'proMonthly',
+        planCode: 'pro-monthly',
         mode: 'subscription',
         successUrl: SUCCESS_URL,
         cancelUrl: 'https://app.example.com/billing/cancel',
@@ -118,7 +118,7 @@ describe('createCheckoutSession', () => {
     await createCheckoutSession({
       tenantId: TENANT_ID,
       customerEmail: 'tenant@example.com',
-      planCode: 'proMonthly',
+      planCode: 'pro-monthly',
       mode: 'subscription',
       trialDays: 7,
       successUrl: SUCCESS_URL,
@@ -131,6 +131,59 @@ describe('createCheckoutSession', () => {
     );
   });
 
+  it('resolve código promocional humano antes de criar o Checkout', async () => {
+    mockSdk.sdk.promotionCodes.list.mockResolvedValue({
+      data: [{ id: 'promo_test_launch20', code: 'LAUNCH20' }],
+    });
+    mockSdk.sdk.checkout.sessions.create.mockResolvedValue(
+      makeStripeCheckoutSessionFixture({ mode: 'subscription' }),
+    );
+
+    await createCheckoutSession({
+      tenantId: TENANT_ID,
+      customerEmail: 'tenant@example.com',
+      planCode: 'pro-monthly',
+      mode: 'subscription',
+      couponCode: 'LAUNCH20',
+      successUrl: SUCCESS_URL,
+      cancelUrl: CANCEL_URL,
+    });
+
+    expect(mockSdk.sdk.promotionCodes.list).toHaveBeenCalledWith({
+      code: 'LAUNCH20',
+      active: true,
+      limit: 1,
+    });
+    expect(mockSdk.sdk.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discounts: [{ promotion_code: 'promo_test_launch20' }],
+      }),
+    );
+  });
+
+  it('rejeita código promocional inexistente antes de criar o Checkout', async () => {
+    mockSdk.sdk.promotionCodes.list.mockResolvedValue({ data: [] });
+
+    const result = createCheckoutSession({
+      tenantId: TENANT_ID,
+      customerEmail: 'tenant@example.com',
+      planCode: 'pro-monthly',
+      mode: 'subscription',
+      couponCode: 'NAOEXISTE',
+      successUrl: SUCCESS_URL,
+      cancelUrl: CANCEL_URL,
+    });
+
+    await expect(result).rejects.toMatchObject({
+      name: 'PromotionCodeNotFoundError',
+      code: 'promotion_code_not_found',
+      httpStatus: 400,
+      promotionCode: 'NAOEXISTE',
+    });
+
+    expect(mockSdk.sdk.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
   it('lança erro se plano sem price ID configurado', async () => {
     delete process.env['STRIPE_PRICE_PRO_MONTHLY'];
 
@@ -138,7 +191,7 @@ describe('createCheckoutSession', () => {
       createCheckoutSession({
         tenantId: TENANT_ID,
         customerEmail: 'tenant@example.com',
-        planCode: 'proMonthly',
+        planCode: 'pro-monthly',
         mode: 'subscription',
         successUrl: SUCCESS_URL,
         cancelUrl: CANCEL_URL,

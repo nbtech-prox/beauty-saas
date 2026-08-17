@@ -4,18 +4,19 @@
  * É a fonte de verdade para saber se um tenant tem acesso ao data plane.
  * Sincronizada com o provider de pagamentos (Stripe, etc.).
  */
-import { z } from 'zod';
-import { IsoDateString, UuidSchema } from './common.js';
+import { z } from "zod";
+import { IsoDateString, UuidSchema } from "./common.js";
+import { PlanCodeSchema } from "./plan.js";
 
 /** Estado da subscription. Espelha os estados Stripe-style. */
 export const SubscriptionStatusSchema = z.enum([
-  'incomplete', // checkout iniciado mas primeiro pagamento falhou
-  'trialing', // em período de trial
-  'active', // ativa e paga
-  'past_due', // pagamento falhado, em grace period
-  'canceled', // cancelada (não renova)
-  'unpaid', // múltiplas tentativas falhadas
-  'paused', // pausa temporária
+  "incomplete", // checkout iniciado mas primeiro pagamento falhou
+  "trialing", // em período de trial
+  "active", // ativa e paga
+  "past_due", // pagamento falhado, em grace period
+  "canceled", // cancelada (não renova)
+  "unpaid", // múltiplas tentativas falhadas
+  "paused", // pausa temporária
 ]);
 export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
 
@@ -23,11 +24,13 @@ export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
 export const SubscriptionSchema = z.object({
   id: UuidSchema,
   tenantId: UuidSchema,
-  planId: UuidSchema,
+  planCode: PlanCodeSchema,
   /** ID da subscription no provider externo (Stripe sub_xxx). */
   externalId: z.string().min(1).max(128),
   /** ID do customer no provider externo (Stripe cus_xxx). */
   externalCustomerId: z.string().min(1).max(128),
+  /** ID do preço Stripe associado à subscription (price_xxx). */
+  stripePriceId: z.string().startsWith("price_").min(7).max(128),
   status: SubscriptionStatusSchema,
   /** Quando a current period começou. */
   currentPeriodStart: IsoDateString,
@@ -47,10 +50,12 @@ export type Subscription = z.infer<typeof SubscriptionSchema>;
 /** Payload para iniciar checkout de uma subscription. */
 export const SubscriptionCreateInputSchema = z.object({
   tenantId: UuidSchema,
-  planId: UuidSchema,
+  planCode: PlanCodeSchema,
   /** Trial days opcionais (0 = sem trial). */
   trialDays: z.number().int().min(0).max(90).optional(),
   /** Coupon code opcional. */
   couponCode: z.string().min(1).max(64).optional(),
 });
-export type SubscriptionCreateInput = z.infer<typeof SubscriptionCreateInputSchema>;
+export type SubscriptionCreateInput = z.infer<
+  typeof SubscriptionCreateInputSchema
+>;

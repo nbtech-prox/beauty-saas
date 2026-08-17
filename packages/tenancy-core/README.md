@@ -1,52 +1,72 @@
 # @beauty-saas/tenancy-core
 
-Lógica de **identificação de tenant** a partir de um pedido HTTP. Server-only (Node runtime).
+Resolução de tenant a partir de um slug (subdomínio) e cache em memória com TTL. Server-only (Node runtime).
+
+> **Estado da Fase 1**: parcial — Marco 6 (resolve + cache) concluído em 2026-08-17
+>
+> **Última actualização**: 2026-08-17
 
 ## Responsabilidades
 
-- Extrair `tenantSlug` do header `X-Tenant-Slug` (vindo do Traefik)
-- Validar slug (formato, subdomínios reservados)
-- Resolver `tenantId` via cache (Redis) → DB
-- Devolver `Tenant` validado (Zod) ou erro tipado
-- Helpers para injectar `tenantId` em chamadas `api-client`
+- `resolveTenantBySlug(slug, options)` consulta o `JOYCE_RESOLVE_URL` configurado (default `http://localhost:3000/tenancy/resolve`) e devolve `TenantResolution` com o estado do tenant.
+- Normaliza o slug para `[a-z0-9-]{3,30}`. Slugs que não respeitem a forma são rejeitados como `not_found` sem chamar o data plane.
+- `TenantResolutionCache` armazena respostas por 60 segundos (TTL configurável) em memória; `not_found` não fica em cache para evitar loops quando o slug ainda está a ser provisionado.
+- Usa `AbortSignal.timeout(2500)` para tolerar falhas transitórias do data plane (5xx, timeout, DNS) sem propagar excepções para o caller.
 
-## Slugs reservados
-
-Estes subdomínios NUNCA podem ser usados por tenants (retornam 404):
-
-```
-www, api, app, admin, platform, mail, ftp, cdn, static, assets,
-status, help, support, docs, blog, auth, login, register,
-checkout, billing, webhooks, stripe, _acme-challenge
-```
-
-## Estrutura (planeada)
-
-```
-src/
-├── index.ts
-├── resolve.ts       extractSlugFromRequest, resolveTenant
-├── reserved.ts      RESERVED_SLUGS + isReserved()
-├── cache.ts         Redis-backed cache (TTL 5min)
-└── types.ts         TenantContext
-```
-
-## Uso (planeado)
+## API
 
 ```ts
-// apps/landing/middleware.ts
-import { resolveTenant } from '@beauty-saas/tenancy-core/resolve';
+import {
+  resolveTenantBySlug,
+  TenantResolutionCache,
+} from '@beauty-saas/tenancy-core';
 
-export async function middleware(req: NextRequest) {
-  const ctx = await resolveTenant(req);
-  if (!ctx) return new NextResponse('Tenant not found', { status: 404 });
-  // ctx.tenantId, ctx.tenantSlug, ctx.plan
+const result = await resolveTenantBySlug('salao-aurora');
+// -> { status: "active", tenantId: "uuid", slug: "salao-aurora", name: "Salão Aurora", planCode: "pro-monthly" }
+
+// Injeccção de fetch para testes
+await resolveTenantBySlug('salao-aurora', { fetchImpl: myMockedFetch });
+
+// Cache personalizável
+const cache = new TenantResolutionCache();
+// TTL padrão 60s, configurável em set(slug, value, ttlMs)
+```
+
+## Tipos públicos
+
+```ts
+type TenantStatus =
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'canceled'
+  | 'suspended'
+  | 'not_found'
+  | 'reserved';
+
+interface TenantResolution {
+  status: TenantStatus;
+  tenantId?: string;
+  slug?: string;
+  name?: string;
+  planCode?: string;
 }
 ```
 
-## Status
+## Variáveis de ambiente
 
-🚧 **Stub**. Nada implementado.
+- `JOYCE_RESOLVE_URL` — base URL do endpoint de tenancy do data plane. Sem default em produção; default `http://localhost:3000/tenancy/resolve` em desenvolvimento.
+
+## Estrutura
+
+```
+src/
+├── index.ts       re-exports públicos
+├── resolve.ts     resolveTenantBySlug, normalizeSlug, isValidSlug
+├── cache.ts       TenantResolutionCache (Map + TTL)
+├── resolve.test.ts
+└── cache.test.ts
+```
 
 ## Importante
 
